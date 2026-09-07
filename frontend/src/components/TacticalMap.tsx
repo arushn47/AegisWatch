@@ -34,14 +34,22 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
       zoom: 2.2,
       minZoom: 2.0,
       maxZoom: 14,
-      maxBounds: [
-        [-85, -360],
-        [85, 360],
-      ],
-      maxBoundsViscosity: 1.0,
       zoomControl: false,
       attributionControl: true,
       worldCopyJump: true,
+    });
+
+    // Smoothly constrain ONLY vertical latitude so user cannot drag into empty black void,
+    // while leaving horizontal panning 100% infinite, continuous, and frictionless around the globe.
+    map.on('drag', () => {
+      const center = map.getCenter();
+      let clampedLat = center.lat;
+      if (center.lat > 75) clampedLat = 75;
+      else if (center.lat < -75) clampedLat = -75;
+
+      if (clampedLat !== center.lat) {
+        map.panTo([clampedLat, center.lng], { animate: false });
+      }
     });
 
     // Tactical High-Contrast Dark Basemap (Free & Public, No API key required, No watermarks)
