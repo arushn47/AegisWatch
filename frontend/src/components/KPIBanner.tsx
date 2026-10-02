@@ -37,8 +37,8 @@ export const KPIBanner: React.FC<KPIBannerProps> = ({ stats, onFilterType }) => 
         className="flex items-center gap-3 p-3 rounded-xl bg-surface-container-low hover:bg-surface-container border border-outline-variant/30 transition-all text-left group shadow-sm"
         type="button"
       >
-        <div className="w-10 h-10 rounded-lg bg-tertiary/20 border border-tertiary/40 flex items-center justify-center text-tertiary group-hover:scale-105 transition-transform flex-shrink-0">
-          <Activity className="w-5 h-5 text-tertiary" />
+        <div className="w-10 h-10 rounded-lg bg-[#c2692a]/20 border border-[#c2692a]/40 flex items-center justify-center text-[#c2692a] group-hover:scale-105 transition-transform flex-shrink-0">
+          <Activity className="w-5 h-5 text-[#c2692a]" />
         </div>
         <div className="flex flex-col min-w-0">
           <span className="font-headline-md text-xl font-bold text-on-surface tabular-nums">

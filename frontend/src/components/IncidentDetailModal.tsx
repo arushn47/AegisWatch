@@ -72,9 +72,9 @@ export const IncidentDetailModal: React.FC<IncidentDetailModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-in fade-in duration-200" onClick={onClose}>
       <div 
-        className="relative w-full max-w-2xl bg-surface-container-low border border-outline-variant/50 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
+        className="relative w-full max-w-5xl bg-surface-container-low border border-outline-variant/50 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Modal Header */}
@@ -114,162 +114,188 @@ export const IncidentDetailModal: React.FC<IncidentDetailModalProps> = ({
           </button>
         </div>
 
+        
         {/* Modal Body */}
-        <div className="p-5 overflow-y-auto flex flex-col gap-5 text-sm">
-          {/* Telemetry Metrics Grid */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-            {incident.metrics.magnitude && (
-              <div className="p-3 rounded-lg bg-surface-container border border-outline-variant/30 flex flex-col">
-                <span className="font-label-mono-sm text-[10px] text-outline uppercase">MAGNITUDE</span>
-                <span className="font-headline-md text-lg font-bold text-tertiary">
-                  M {incident.metrics.magnitude.toFixed(1)}
-                </span>
-                <span className="text-[10px] text-on-surface-variant">Moment Scale</span>
+        <div className="p-5 overflow-y-auto max-h-[75vh] w-full">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full">
+            
+            {/* LEFT COLUMN */}
+            <div className="flex flex-col gap-5 w-full">
+              {/* Telemetry Metrics Grid */}
+              <div className="grid grid-cols-2 gap-3 w-full">
+                {incident.metrics.magnitude && (
+                  <div className="p-3.5 rounded-lg bg-surface-container border border-outline-variant/30 flex flex-col">
+                    <span className="font-label-mono-sm text-[10px] text-outline uppercase">MAGNITUDE</span>
+                    <span className="font-headline-md text-xl font-bold text-tertiary">
+                      M {incident.metrics.magnitude.toFixed(1)}
+                    </span>
+                    <span className="text-[10px] text-on-surface-variant mt-0.5">Moment Scale</span>
+                  </div>
+                )}
+
+                {incident.metrics.depthKm !== undefined && (
+                  <div className="p-3.5 rounded-lg bg-surface-container border border-outline-variant/30 flex flex-col">
+                    <span className="font-label-mono-sm text-[10px] text-outline uppercase">FOCAL DEPTH</span>
+                    <span className="font-headline-md text-xl font-bold text-on-surface font-mono">
+                      {incident.metrics.depthKm} km
+                    </span>
+                    <span className="text-[10px] text-on-surface-variant mt-0.5">Hypocenter</span>
+                  </div>
+                )}
+
+                {incident.metrics.windSpeedKmh && (
+                  <div className="p-3.5 rounded-lg bg-surface-container border border-outline-variant/30 flex flex-col">
+                    <span className="font-label-mono-sm text-[10px] text-outline uppercase">MAX WIND</span>
+                    <span className="font-headline-md text-xl font-bold text-primary font-mono">
+                      {incident.metrics.windSpeedKmh} km/h
+                    </span>
+                    <span className="text-[10px] text-on-surface-variant mt-0.5">Sustained Gusts</span>
+                  </div>
+                )}
+
+                {incident.metrics.acresBurned && (
+                  <div className="p-3.5 rounded-lg bg-surface-container border border-outline-variant/30 flex flex-col">
+                    <span className="font-label-mono-sm text-[10px] text-outline uppercase">PERIMETER</span>
+                    <span className="font-headline-md text-xl font-bold text-secondary font-mono">
+                      {incident.metrics.acresBurned.toLocaleString()} ac
+                    </span>
+                    <span className="text-[10px] text-on-surface-variant font-medium mt-0.5">
+                      {incident.metrics.containmentPercent !== undefined
+                        ? `Contained: ${incident.metrics.containmentPercent}%`
+                        : 'Ongoing Monitoring'}
+                    </span>
+                  </div>
+                )}
+
+                {incident.metrics.crestHeightM && (
+                  <div className="p-3.5 rounded-lg bg-surface-container border border-outline-variant/30 flex flex-col">
+                    <span className="font-label-mono-sm text-[10px] text-outline uppercase">CREST SURGE</span>
+                    <span className="font-headline-md text-xl font-bold text-surface-tint font-mono">
+                      +{incident.metrics.crestHeightM}m
+                    </span>
+                    <span className="text-[10px] text-on-surface-variant mt-0.5">Above Datum</span>
+                  </div>
+                )}
+
+                <div className="p-3.5 rounded-lg bg-surface-container border border-outline-variant/30 flex flex-col">
+                  <span className="font-label-mono-sm text-[10px] text-outline uppercase">STATUS</span>
+                  <span className="font-headline-md text-lg font-bold text-error font-mono tracking-wide mt-1">
+                    ACTIVE
+                  </span>
+                  <span className="text-[10px] text-on-surface-variant mt-1">Ongoing Event</span>
+                </div>
+                
+                <div className="p-3.5 rounded-lg bg-surface-container border border-outline-variant/30 flex flex-col">
+                  <span className="font-label-mono-sm text-[10px] text-outline uppercase">COORDINATES</span>
+                  <span className="font-headline-md text-sm font-bold text-on-surface font-mono mt-2">
+                    {lat.toFixed(2)}&deg;, {lng.toFixed(2)}&deg;
+                  </span>
+                  <span className="text-[10px] text-on-surface-variant mt-1.5">Epicenter</span>
+                </div>
+
+                <div className="p-3.5 rounded-lg bg-surface-container border border-outline-variant/30 flex flex-col">
+                  <span className="font-label-mono-sm text-[10px] text-outline uppercase">PRIMARY SOURCE</span>
+                  <span className="font-body-md text-xs font-semibold text-on-surface truncate mt-1.5">
+                    {incident.primarySource}
+                  </span>
+                  <span className="text-[10px] text-primary mt-1">Verified Feed</span>
+                </div>
               </div>
-            )}
 
-            {incident.metrics.depthKm !== undefined && (
-              <div className="p-3 rounded-lg bg-surface-container border border-outline-variant/30 flex flex-col">
-                <span className="font-label-mono-sm text-[10px] text-outline uppercase">FOCAL DEPTH</span>
-                <span className="font-headline-md text-lg font-bold text-on-surface font-mono">
-                  {incident.metrics.depthKm} km
+              {/* Event Narrative Summary */}
+              <div className="flex flex-col gap-2 p-4 rounded-lg bg-surface-container/60 border border-outline-variant/20 w-full mt-2">
+                <span className="font-label-mono-sm text-xs text-outline uppercase font-semibold flex items-center gap-1.5">
+                  <Layers className="w-3.5 h-3.5 text-primary" />
+                  SITUATION REPORT
                 </span>
-                <span className="text-[10px] text-on-surface-variant">Hypocenter</span>
+                <p className="text-on-surface text-sm leading-relaxed font-body-md">
+                  {incident.summary}
+                </p>
               </div>
-            )}
-
-            {incident.metrics.windSpeedKmh && (
-              <div className="p-3 rounded-lg bg-surface-container border border-outline-variant/30 flex flex-col">
-                <span className="font-label-mono-sm text-[10px] text-outline uppercase">MAX WIND</span>
-                <span className="font-headline-md text-lg font-bold text-primary font-mono">
-                  {incident.metrics.windSpeedKmh} km/h
-                </span>
-                <span className="text-[10px] text-on-surface-variant">Sustained Gusts</span>
-              </div>
-            )}
-
-            {incident.metrics.acresBurned && (
-              <div className="p-3 rounded-lg bg-surface-container border border-outline-variant/30 flex flex-col">
-                <span className="font-label-mono-sm text-[10px] text-outline uppercase">PERIMETER</span>
-                <span className="font-headline-md text-lg font-bold text-secondary font-mono">
-                  {incident.metrics.acresBurned.toLocaleString()} ac
-                </span>
-                <span className="text-[10px] text-on-surface-variant font-medium">
-                  {incident.metrics.containmentPercent !== undefined
-                    ? `Contained: ${incident.metrics.containmentPercent}%`
-                    : 'Ongoing Monitoring'}
-                </span>
-              </div>
-            )}
-
-            {incident.metrics.crestHeightM && (
-              <div className="p-3 rounded-lg bg-surface-container border border-outline-variant/30 flex flex-col">
-                <span className="font-label-mono-sm text-[10px] text-outline uppercase">CREST SURGE</span>
-                <span className="font-headline-md text-lg font-bold text-surface-tint font-mono">
-                  +{incident.metrics.crestHeightM}m
-                </span>
-                <span className="text-[10px] text-on-surface-variant">Above Datum</span>
-              </div>
-            )}
-
-            <div className="p-3 rounded-lg bg-surface-container border border-outline-variant/30 flex flex-col">
-              <span className="font-label-mono-sm text-[10px] text-outline uppercase">PRIMARY SOURCE</span>
-              <span className="font-body-md text-xs font-semibold text-on-surface truncate">
-                {incident.primarySource}
-              </span>
-              <span className="text-[10px] text-primary">Verified Feed</span>
-            </div>
-          </div>
-
-          {/* Event Narrative Summary */}
-          <div className="flex flex-col gap-1.5 p-3.5 rounded-lg bg-surface-container/60 border border-outline-variant/20">
-            <span className="font-label-mono-sm text-[11px] text-outline uppercase font-semibold flex items-center gap-1.5">
-              <Layers className="w-3 h-3 text-primary" />
-              SITUATION REPORT
-            </span>
-            <p className="text-on-surface text-xs leading-relaxed font-body-md">
-              {incident.summary}
-            </p>
-          </div>
-
-          {/* PostGIS Deterministic Risk Preview Banner */}
-          <div className="p-3.5 rounded-xl bg-surface-container-high border border-outline-variant/40 flex flex-col gap-2">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Compass className="w-4 h-4 text-primary" />
-                <span className="font-label-mono-sm text-xs text-on-surface font-bold uppercase tracking-wider">
-                  PostGIS Deterministic Risk Assessment
-                </span>
-              </div>
-              <span className={`px-2 py-0.5 rounded font-label-mono-sm text-[10px] font-bold ${
-                isHighSeverity
-                  ? 'bg-secondary-container text-white'
-                  : 'bg-primary-container text-on-primary-container'
-              }`}>
-                {isHighSeverity ? 'WARNING (PERIPHERAL BUFFER)' : 'MONITORING TIER'}
-              </span>
-            </div>
-            <p className="text-xs text-on-surface-variant">
-              Evaluated via PostGIS spatial distance calculation from client coordinate envelope. Hazard buffer evaluated within deterministic radius threshold.
-            </p>
-          </div>
-
-          {/* AI Emergency Guidance Generator (Google Gemini Preview) */}
-          <div className="p-4 rounded-xl bg-surface-container-high/80 border border-primary/30 flex flex-col gap-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-primary" />
-                <span className="font-headline-sm text-xs font-bold text-primary uppercase tracking-wider">
-                  AI Emergency Guidance Assistant (Google Gemini)
-                </span>
-              </div>
-              {!aiExpanded && (
-                <button
-                  onClick={handleGenerateAiGuidance}
-                  disabled={isGeneratingAi}
-                  className="px-3 py-1 rounded bg-primary text-on-primary font-body-md text-xs font-semibold hover:bg-primary-fixed transition-colors flex items-center gap-1.5 shadow-sm"
-                  type="button"
-                >
-                  <Sparkles className="w-3 h-3" />
-                  {isGeneratingAi ? 'Synthesizing...' : 'Generate AI Action Brief'}
-                </button>
-              )}
             </div>
 
-            {aiExpanded && aiChecklist && (
-              <div className="flex flex-col gap-2 pt-2 border-t border-outline-variant/30">
-                <span className="font-label-mono-sm text-[10px] text-on-surface-variant uppercase font-semibold">
-                  Recommended Immediate Protocol:
-                </span>
-                <ul className="flex flex-col gap-1.5 pl-1">
-                  {aiChecklist.map((step, idx) => (
-                    <li key={idx} className="flex items-start gap-2 text-xs text-on-surface">
-                      <span className="w-4 h-4 rounded-full bg-primary/20 text-primary font-mono text-[10px] flex items-center justify-center flex-shrink-0 mt-0.5 font-bold">
-                        {idx + 1}
-                      </span>
-                      <span>{step}</span>
-                    </li>
-                  ))}
-                </ul>
+            {/* RIGHT COLUMN */}
+            <div className="flex flex-col gap-6 w-full">
+              {/* Local Impact Assessment */}
+              <div className="p-4 rounded-xl bg-surface-container-high border border-outline-variant/40 flex flex-col gap-3 w-full">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Compass className="w-4 h-4 text-primary" />
+                    <span className="font-label-mono-sm text-xs text-on-surface font-bold uppercase tracking-wider">
+                      Local Impact Assessment
+                    </span>
+                  </div>
+                  <span className={`px-2 py-0.5 rounded font-label-mono-sm text-[10px] font-bold ${
+                    isHighSeverity
+                      ? 'bg-secondary-container text-white'
+                      : 'bg-primary-container text-on-primary-container'
+                  }`}>
+                    {isHighSeverity ? 'WARNING (IN RANGE)' : 'SAFE (OUT OF RANGE)'}
+                  </span>
+                </div>
+                <p className="text-sm text-on-surface-variant leading-relaxed">
+                  Calculated based on your distance from the event epicenter. If you are within the hazard radius, you will receive a direct alert.
+                </p>
               </div>
-            )}
-          </div>
 
-          {/* Mandatory Safety Disclaimer */}
-          <div className="p-3 rounded-lg bg-surface-container border border-secondary-container/30 flex items-start gap-2.5 text-xs text-on-surface-variant">
-            <AlertTriangle className="w-4 h-4 text-secondary flex-shrink-0 mt-0.5" />
-            <div className="flex flex-col gap-0.5">
-              <span className="font-semibold text-secondary text-[11px] uppercase tracking-wider">
-                Emergency Decision-Support Notice
-              </span>
-              <span className="text-[11px] text-outline">
-                AegisWatch is an informational platform. Assessments are non-prescriptive and do not replace sovereign civil defense alerts. Always obey instructions from local emergency authorities.
-              </span>
+              {/* AI Emergency Guidance Generator */}
+              <div className="p-5 rounded-xl bg-surface-container-high/80 border border-primary/30 flex flex-col gap-4 w-full">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-primary" />
+                    <span className="font-headline-sm text-xs font-bold text-primary uppercase tracking-wider">
+                      AI Emergency Guidance Assistant
+                    </span>
+                  </div>
+                  {!aiExpanded && (
+                    <button
+                      onClick={handleGenerateAiGuidance}
+                      disabled={isGeneratingAi}
+                      className="px-3 py-1.5 rounded bg-primary text-on-primary font-body-md text-xs font-semibold hover:bg-primary-fixed transition-colors flex items-center gap-1.5 shadow-sm"
+                      type="button"
+                    >
+                      <Sparkles className="w-3.5 h-3.5" />
+                      {isGeneratingAi ? 'Synthesizing...' : 'Generate AI Action Brief'}
+                    </button>
+                  )}
+                </div>
+
+                {aiExpanded && aiChecklist && (
+                  <div className="flex flex-col gap-3 pt-3 border-t border-outline-variant/30">
+                    <span className="font-label-mono-sm text-[11px] text-on-surface-variant uppercase font-bold tracking-wider">
+                      Recommended Immediate Protocol:
+                    </span>
+                    <ul className="flex flex-col gap-2.5 pl-1">
+                      {aiChecklist.map((step, idx) => (
+                        <li key={idx} className="flex items-start gap-2.5 text-sm text-on-surface leading-relaxed">
+                          <span className="w-5 h-5 rounded-full bg-primary/20 text-primary font-mono text-[11px] flex items-center justify-center flex-shrink-0 mt-0.5 font-bold">
+                            {idx + 1}
+                          </span>
+                          <span>{step}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+
+              {/* Mandatory Safety Disclaimer */}
+              <div className="p-4 rounded-xl bg-error/10 border border-error/30 flex items-start gap-3 w-full mt-auto">
+                <AlertTriangle className="w-5 h-5 text-error flex-shrink-0 mt-0.5" />
+                <div className="flex flex-col gap-1">
+                  <span className="font-bold text-error text-xs uppercase tracking-wider">
+                    IMPORTANT NOTICE
+                  </span>
+                  <span className="text-xs text-on-surface-variant leading-relaxed">
+                    This is an informational tool only. Always follow official evacuation and safety instructions from your local emergency authorities.
+                  </span>
+                </div>
+              </div>
             </div>
           </div>
         </div>
 
-        {/* Modal Footer */}
+{/* Modal Footer */}
         <div className="flex items-center justify-between p-4 border-t border-outline-variant/30 bg-surface-container-lowest/90">
           <div className="flex items-center gap-1.5 text-outline text-xs">
             <Info className="w-3.5 h-3.5" />

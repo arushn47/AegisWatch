@@ -56,7 +56,7 @@ async function fetchUsgsEarthquakes(): Promise<DisasterEvent[]> {
       return {
         id: `usgs-${f.id}`,
         type: 'EARTHQUAKE' as const,
-        title: `M ${mag.toFixed(1)} - ${place}`,
+        title: `M ${mag.toFixed(1)} - ${place.split('of ').pop() || place}`,
         locationName: place.split('of ').pop() || place,
         region: place,
         coordinates: [lat, lng] as [number, number],
@@ -87,7 +87,7 @@ async function fetchUsgsEarthquakes(): Promise<DisasterEvent[]> {
 // Fetch live NASA EONET events (wildfires, severe storms, cyclones, floods)
 async function fetchNasaEonetEvents(): Promise<DisasterEvent[]> {
   try {
-    const res = await fetch('https://eonet.gsfc.nasa.gov/api/v3/events?status=open&limit=30');
+    const res = await fetch('https://eonet.gsfc.nasa.gov/api/v3/events?status=open&limit=300');
     if (!res.ok) return [];
     const data = await res.json();
     const rawEvents = data.events || [];
@@ -188,7 +188,98 @@ async function fetchNasaEonetEvents(): Promise<DisasterEvent[]> {
           officialAdvisory: 'Low-lying riparian zones evacuate to elevated relief coordinates.',
           isLiveFeed: true,
         });
+      } else if (catId === 'volcanoes') {
+        eonetDisasters.push({
+          id: `nasa-${event.id}`,
+          type: 'VOLCANO',
+          title: event.title,
+          locationName: event.title.split(',').pop()?.trim() || event.title,
+          region: 'Volcanic Zone',
+          coordinates: [lat, lng],
+          severity: 'CRITICAL',
+          status: 'ACTIVE',
+          timestamp: new Date(geomDate).toISOString(),
+          timeAgo: formatTimeAgo(geomDate),
+          primarySource: `NASA EONET / ${primarySourceId}`,
+          externalUrl,
+          summary: `Active volcanic eruption or significant ash emission detected.`,
+          officialAdvisory: 'Aviation hazard warning. Avoid local vicinity due to ash and gas emissions.',
+          isLiveFeed: true,
+        });
+      } else if (catId === 'landslides') {
+        eonetDisasters.push({
+          id: `nasa-${event.id}`,
+          type: 'LANDSLIDE',
+          title: event.title,
+          locationName: event.title.split(',').pop()?.trim() || event.title,
+          region: 'Terrain Failure Zone',
+          coordinates: [lat, lng],
+          severity: 'HIGH',
+          status: 'ACTIVE',
+          timestamp: new Date(geomDate).toISOString(),
+          timeAgo: formatTimeAgo(geomDate),
+          primarySource: `NASA EONET / ${primarySourceId}`,
+          externalUrl,
+          summary: `Significant landslide or terrain failure event.`,
+          officialAdvisory: 'Avoid low-lying areas and steep slopes.',
+          isLiveFeed: true,
+        });
+      } else if (catId === 'tempExtremes') {
+        eonetDisasters.push({
+          id: `nasa-${event.id}`,
+          type: 'HEATWAVE',
+          title: event.title,
+          locationName: event.title.split(',').pop()?.trim() || event.title,
+          region: 'Regional Thermal Anomaly',
+          coordinates: [lat, lng],
+          severity: 'HIGH',
+          status: 'ACTIVE',
+          timestamp: new Date(geomDate).toISOString(),
+          timeAgo: formatTimeAgo(geomDate),
+          primarySource: `NASA EONET / ${primarySourceId}`,
+          externalUrl,
+          summary: `Extreme temperature anomaly detected.`,
+          officialAdvisory: 'Extreme heat warning. Stay hydrated and indoors.',
+          isLiveFeed: true,
+        });
+      } else if (catId === 'drought') {
+        eonetDisasters.push({
+          id: `nasa-${event.id}`,
+          type: 'DROUGHT',
+          title: event.title,
+          locationName: event.title.split(',').pop()?.trim() || event.title,
+          region: 'Arid Zone',
+          coordinates: [lat, lng],
+          severity: 'MEDIUM',
+          status: 'ACTIVE',
+          timestamp: new Date(geomDate).toISOString(),
+          timeAgo: formatTimeAgo(geomDate),
+          primarySource: `NASA EONET / ${primarySourceId}`,
+          externalUrl,
+          summary: `Prolonged drought or significant water scarcity event.`,
+          officialAdvisory: 'Water conservation measures in effect.',
+          isLiveFeed: true,
+        });
+      } else if (catId === 'snow') {
+        eonetDisasters.push({
+          id: `nasa-${event.id}`,
+          type: 'BLIZZARD',
+          title: event.title,
+          locationName: event.title.split(',').pop()?.trim() || event.title,
+          region: 'Winter Storm Zone',
+          coordinates: [lat, lng],
+          severity: 'HIGH',
+          status: 'ACTIVE',
+          timestamp: new Date(geomDate).toISOString(),
+          timeAgo: formatTimeAgo(geomDate),
+          primarySource: `NASA EONET / ${primarySourceId}`,
+          externalUrl,
+          summary: `Severe winter storm, heavy snowfall or blizzard conditions.`,
+          officialAdvisory: 'Travel highly discouraged. Risk of freezing temperatures.',
+          isLiveFeed: true,
+        });
       }
+
     }
 
     return eonetDisasters;

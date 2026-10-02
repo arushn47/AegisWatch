@@ -22,7 +22,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className="dark">
+    <html lang="en" className="dark" suppressHydrationWarning>
       <head>
         {/* Browser Tab Icon (Favicon) */}
         <link rel="icon" type="image/png" href="/logo.png" />
@@ -48,7 +48,7 @@ export default function RootLayout({
           crossOrigin=""
         />
       </head>
-      <body className="bg-surface font-body-md text-on-surface antialiased selection:bg-primary-container selection:text-on-primary-container min-h-screen">
+      <body suppressHydrationWarning className="bg-surface font-body-md text-on-surface antialiased selection:bg-primary-container selection:text-on-primary-container min-h-screen">
         {children}
       </body>
     </html>
