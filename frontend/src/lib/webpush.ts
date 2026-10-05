@@ -15,18 +15,23 @@ export interface StoredSubscription {
 
 const SUBSCRIPTIONS_FILE = path.join(process.cwd(), '.push_subscriptions.json');
 
-// Ensure VAPID is configured
-const VAPID_PUBLIC_KEY =
-  process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ||
-  'BP3z4ZMTsW6xNUBZ9pyQ5Yt9OkdnAiQVE-H6mg5dDM6n4casg3OFBlVgyETuyFuNE5HBqEvjnI-tUvNtHwH9G_Y';
-const VAPID_PRIVATE_KEY =
-  process.env.VAPID_PRIVATE_KEY || 'XAyAr2ubK6MacAsCa-uqlb-kn7Avty9pS3bT-bpK6X8';
+// VAPID credentials — must be set via environment variables. Never hardcode these.
+// Generate new keys with: npx web-push generate-vapid-keys
+const VAPID_PUBLIC_KEY = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+const VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY;
 const VAPID_SUBJECT = process.env.VAPID_SUBJECT || 'https://xvxkkqdnatnqumnlshlg.supabase.co';
 
-try {
-  webpush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY);
-} catch (err) {
-  console.warn('[webpush] Failed to initialize VAPID credentials:', err);
+if (!VAPID_PUBLIC_KEY || !VAPID_PRIVATE_KEY) {
+  console.warn(
+    '[webpush] NEXT_PUBLIC_VAPID_PUBLIC_KEY and VAPID_PRIVATE_KEY env vars are not set. ' +
+    'Web Push notifications will not work. Set them in your .env file or Vercel dashboard.'
+  );
+} else {
+  try {
+    webpush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY);
+  } catch (err) {
+    console.warn('[webpush] Failed to initialize VAPID credentials:', err);
+  }
 }
 
 function loadSubscriptions(): StoredSubscription[] {
