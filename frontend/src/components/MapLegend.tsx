@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { ChevronDown, ChevronUp, Layers, ShieldAlert } from 'lucide-react';
 import type { DisasterEvent, DisasterType } from '../types/disaster';
 import { HAZARD_CATEGORIES } from '../lib/hazardClassification';
@@ -12,6 +12,23 @@ interface MapLegendProps {
 export const MapLegend: React.FC<MapLegendProps> = ({ incidents }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<'types' | 'severity'>('types');
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // Close legend on outside tap/click
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleClickOutside = (e: MouseEvent | TouchEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('touchstart', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('touchstart', handleClickOutside);
+    };
+  }, [isOpen]);
 
   // Count active incidents per category from actual data
   const activeCategories = useMemo(() => {
@@ -31,32 +48,32 @@ export const MapLegend: React.FC<MapLegendProps> = ({ incidents }) => {
   }, [incidents]);
 
   return (
-    <div className="absolute top-3 right-3 z-30 flex flex-col items-end pointer-events-auto">
+    <div ref={containerRef} className="relative flex flex-col items-end pointer-events-auto shrink-0">
       {/* Legend Toggle Header */}
       <button
         onClick={() => setIsOpen(!isOpen)}
         aria-expanded={isOpen}
         aria-label="Toggle map legend"
-        className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-surface-container-low/90 backdrop-blur-md border border-outline-variant/40 hover:border-primary/50 text-on-surface text-xs font-label-mono-sm shadow-md transition-all group focus-visible:ring-1 focus-visible:ring-primary focus-visible:outline-none"
+        className="flex items-center gap-1.5 px-2 sm:px-2.5 py-1 sm:py-1.5 rounded-lg bg-surface-container-low/95 backdrop-blur-md border border-outline-variant/40 hover:border-primary/50 text-on-surface text-xs font-label-mono-sm shadow-md transition-all group focus-visible:ring-1 focus-visible:ring-primary focus-visible:outline-none"
         type="button"
         title="Toggle Map Legend"
       >
-        <Layers className="w-3.5 h-3.5 text-primary group-hover:scale-110 transition-transform" />
-        <span className="font-semibold tracking-wider text-[11px] text-on-surface uppercase">Legend</span>
+        <Layers className="w-3.5 h-3.5 text-primary group-hover:scale-110 transition-transform shrink-0" />
+        <span className="font-semibold tracking-wider text-[10px] sm:text-[11px] text-on-surface uppercase">Legend</span>
         {activeCategories.length > 0 && !isOpen && (
-          <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+          <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse shrink-0" />
         )}
         {isOpen ? (
-          <ChevronUp className="w-3.5 h-3.5 text-outline group-hover:text-primary transition-colors" />
+          <ChevronUp className="w-3.5 h-3.5 text-outline group-hover:text-primary transition-colors shrink-0" />
         ) : (
-          <ChevronDown className="w-3.5 h-3.5 text-outline group-hover:text-primary transition-colors" />
+          <ChevronDown className="w-3.5 h-3.5 text-outline group-hover:text-primary transition-colors shrink-0" />
         )}
       </button>
 
       {/* Expanded Legend Panel */}
       {isOpen && (
         <div
-          className="mt-1.5 w-64 sm:w-72 bg-surface-container-lowest/95 backdrop-blur-md border border-outline-variant/35 rounded-xl p-3 shadow-2xl flex flex-col gap-2.5 animate-in fade-in slide-in-from-top-2 duration-150"
+          className="absolute top-full right-0 mt-1.5 w-[min(280px,calc(100vw-3rem))] sm:w-72 bg-surface-container-lowest/95 backdrop-blur-md border border-outline-variant/35 rounded-xl p-3 shadow-2xl flex flex-col gap-2.5 animate-in fade-in slide-in-from-top-2 duration-150 z-40"
           role="region"
           aria-label="Map Legend Details"
         >

@@ -359,26 +359,30 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
         </button>
       )}
 
-      {/* Top-Left Coverage Badge with refined operational terminology */}
-      <div className="absolute top-3 left-3 z-20 flex items-center gap-2 px-3 py-1.5 rounded-full bg-surface-container-low/90 backdrop-blur-md border border-outline-variant/40 shadow-sm pointer-events-none">
-        <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
-        <span className="font-label-mono-sm text-xs text-on-surface-variant font-medium tracking-wide whitespace-nowrap">
-          Live Coverage &bull;{' '}
-          <span className="text-on-surface font-semibold tabular-nums">{incidents.length}</span>{' '}
-          <span className="hidden sm:inline">Active Events</span>
-          <span className="sm:hidden">Events</span>
-          {highRiskCount > 0 && (
-            <>
-              <span className="text-outline mx-1">&bull;</span>
-              <span className="text-amber-400 font-semibold tabular-nums">{highRiskCount}</span>{' '}
-              <span className="text-amber-400/90 font-medium">High Risk</span>
-            </>
-          )}
-        </span>
-      </div>
+      {/* Top Map Operational Header: Live Coverage Badge + Tactical Legend */}
+      <div className="absolute top-2.5 sm:top-3 inset-x-2.5 sm:inset-x-3 z-30 flex items-center justify-between gap-2 pointer-events-none">
+        {/* Coverage Badge */}
+        <div className="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-full bg-surface-container-low/95 backdrop-blur-md border border-outline-variant/40 shadow-sm pointer-events-auto min-w-0 max-w-[calc(100%-110px)] sm:max-w-none">
+          <span className="w-2 h-2 rounded-full bg-primary animate-pulse shrink-0" />
+          <span className="font-label-mono-sm text-[11px] sm:text-xs text-on-surface-variant font-medium tracking-wide truncate flex items-center gap-1">
+            <span className="hidden md:inline">Live Coverage &bull;</span>
+            <span className="text-on-surface font-semibold tabular-nums">{incidents.length}</span>
+            <span className="hidden sm:inline">Active Events</span>
+            <span className="sm:hidden">Events</span>
+            {highRiskCount > 0 && (
+              <>
+                <span className="text-outline mx-0.5">&bull;</span>
+                <span className="text-amber-400 font-semibold tabular-nums">{highRiskCount}</span>
+                <span className="text-amber-400/90 font-medium hidden xs:inline sm:inline">High Risk</span>
+                <span className="text-amber-400/90 font-medium xs:hidden sm:hidden">Risk</span>
+              </>
+            )}
+          </span>
+        </div>
 
-      {/* Top-Right Floating Tactical Legend */}
-      <MapLegend incidents={incidents} />
+        {/* Tactical Legend */}
+        <MapLegend incidents={incidents} />
+      </div>
 
       {/* Bottom-Left Coordinate & Zoom HUD with normalized coordinates */}
       <div className="absolute bottom-3 left-3 z-20 hidden sm:flex items-center gap-3 px-3 py-1.5 rounded-lg bg-surface-container-low/85 backdrop-blur-md border border-outline-variant/30 text-outline font-label-mono-sm text-[11px] tabular-nums pointer-events-none shadow-md">

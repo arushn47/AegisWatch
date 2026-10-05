@@ -13,6 +13,7 @@ interface KPIBannerProps {
 interface MetricSpec {
   type: DisasterType;
   label: string;
+  mobileLabel?: string;
   value: number;
   Icon: React.ElementType;
   /** Top accent bar + icon tint for this hazard domain. */
@@ -31,6 +32,7 @@ export const KPIBanner: React.FC<KPIBannerProps> = ({ stats, onFilterType }) => 
     {
       type: 'WILDFIRE',
       label: 'Active Fires',
+      mobileLabel: 'Wildfires',
       value: stats.activeFires,
       Icon: Flame,
       accent: 'bg-secondary',
@@ -40,6 +42,7 @@ export const KPIBanner: React.FC<KPIBannerProps> = ({ stats, onFilterType }) => 
     {
       type: 'EARTHQUAKE',
       label: '>M4.5 Quakes',
+      mobileLabel: 'Quakes',
       value: stats.significantQuakes,
       Icon: Activity,
       accent: 'bg-[#c2692a]',
@@ -49,6 +52,7 @@ export const KPIBanner: React.FC<KPIBannerProps> = ({ stats, onFilterType }) => 
     {
       type: 'CYCLONE',
       label: 'Tropical Storms',
+      mobileLabel: 'Cyclones',
       value: stats.tropicalStorms,
       Icon: Wind,
       accent: 'bg-primary',
@@ -58,6 +62,7 @@ export const KPIBanner: React.FC<KPIBannerProps> = ({ stats, onFilterType }) => 
     {
       type: 'FLOOD',
       label: 'Major Floods',
+      mobileLabel: 'Floods',
       value: stats.majorFloods,
       Icon: Waves,
       accent: 'bg-[#38bdf8]',
@@ -68,7 +73,7 @@ export const KPIBanner: React.FC<KPIBannerProps> = ({ stats, onFilterType }) => 
 
   return (
     <section ref={gridRef} className="grid grid-cols-2 sm:grid-cols-4 gap-3 w-full">
-      {metrics.map(({ type, label, value, Icon, accent, iconWrap, hover }) => (
+      {metrics.map(({ type, label, mobileLabel, value, Icon, accent, iconWrap, hover }) => (
         <button
           key={type}
           onClick={() => onFilterType(type)}
@@ -87,7 +92,8 @@ export const KPIBanner: React.FC<KPIBannerProps> = ({ stats, onFilterType }) => 
               className="font-headline-md text-xl font-bold text-on-surface tabular-nums leading-none"
             />
             <span className="font-label-mono-sm text-[10px] uppercase tracking-wider text-on-surface-variant truncate mt-1.5">
-              {label}
+              <span className="hidden sm:inline">{label}</span>
+              <span className="sm:hidden">{mobileLabel || label}</span>
             </span>
           </div>
         </button>

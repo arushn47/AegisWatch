@@ -47,7 +47,7 @@ export const Header: React.FC<HeaderProps> = ({
             priority
           />
           <div className="flex flex-col min-w-0">
-            <span className="font-headline-sm text-headline-sm uppercase text-on-surface tracking-wider font-semibold truncate leading-tight">
+            <span className="font-headline-sm text-sm sm:text-headline-sm uppercase text-on-surface tracking-normal sm:tracking-wider font-semibold whitespace-nowrap leading-tight">
               AEGIS WATCH
             </span>
             <span className="font-label-mono-sm text-[10px] text-primary uppercase font-medium truncate tracking-widest hidden sm:block">
