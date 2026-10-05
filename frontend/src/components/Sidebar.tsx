@@ -52,11 +52,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
         onClick={() => {
           onSelectView('radar');
           onSelectDomain(domain);
+          if (mobileOpen && onClose) onClose();
         }}
-        className={`px-3 py-2 rounded-lg transition-all font-body-md text-body-md text-left flex justify-between items-center focus-visible:ring-1 focus-visible:ring-primary focus-visible:outline-none ${
+        className={`px-3 py-2.5 rounded-lg transition-all font-body-md text-body-md text-left flex justify-between items-center focus-visible:ring-1 focus-visible:ring-primary focus-visible:outline-none cursor-pointer touch-manipulation active:scale-[0.98] ${
           isActive
             ? 'bg-primary-container text-on-primary-container font-semibold shadow-sm'
-            : 'text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface'
+            : 'text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface active:bg-surface-container-highest'
         } ${feedless && !isActive ? 'opacity-50' : ''}`}
         type="button"
         title={
@@ -91,11 +92,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
     const isSelected = activeRegion === region || (region === 'SOUTH_ASIA' && activeRegion === 'INDIA');
     return (
       <button
-        onClick={() => onSelectRegion(region)}
-        className={`px-3 py-1.5 rounded-lg transition-all font-body-md text-sm text-left flex justify-between items-center focus-visible:ring-1 focus-visible:ring-primary focus-visible:outline-none border cursor-pointer ${
+        onClick={() => {
+          onSelectRegion(region);
+          if (mobileOpen && onClose) onClose();
+        }}
+        className={`px-3 py-2 rounded-lg transition-all font-body-md text-sm text-left flex justify-between items-center focus-visible:ring-1 focus-visible:ring-primary focus-visible:outline-none border cursor-pointer touch-manipulation active:scale-[0.98] ${
           isSelected
             ? 'bg-surface-container-high text-on-surface border-primary/40 font-semibold shadow-sm'
-            : 'border-transparent text-on-surface-variant hover:bg-surface-container hover:text-on-surface'
+            : 'border-transparent text-on-surface-variant hover:bg-surface-container hover:text-on-surface active:bg-surface-container-highest'
         }`}
         type="button"
       >
@@ -121,7 +125,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
   };
 
   const renderContent = () => (
-    <div className="flex-1 overflow-y-auto overscroll-contain px-3 py-4 flex flex-col gap-5 custom-scrollbar min-h-0">
+    <div
+      className="flex-1 overflow-y-auto overscroll-y-contain px-3 py-4 flex flex-col gap-5 custom-scrollbar min-h-0 touch-pan-y"
+      style={{ WebkitOverflowScrolling: 'touch' }}
+    >
       {/* Overview Section */}
       <div className="flex flex-col gap-1">
         <div className="px-2 py-1">
@@ -134,11 +141,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
           {/* Enhanced Nearby Alerts Action Button */}
           <button
-            onClick={() => onSelectView('risk')}
-            className={`px-3 py-2 rounded-lg transition-all font-body-md text-body-md text-left flex items-center justify-between group border focus-visible:ring-1 focus-visible:ring-primary focus-visible:outline-none cursor-pointer ${
+            onClick={() => {
+              onSelectView('risk');
+              if (mobileOpen && onClose) onClose();
+            }}
+            className={`px-3 py-2.5 rounded-lg transition-all font-body-md text-body-md text-left flex items-center justify-between group border focus-visible:ring-1 focus-visible:ring-primary focus-visible:outline-none cursor-pointer touch-manipulation active:scale-[0.98] ${
               activeView === 'risk'
                 ? 'bg-primary-container text-on-primary-container font-semibold shadow-sm border-transparent'
-                : 'text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface border-outline-variant/20 hover:border-primary/40 bg-surface-container-low/40'
+                : 'text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface border-outline-variant/20 hover:border-primary/40 bg-surface-container-low/40 active:bg-surface-container-highest'
             }`}
             type="button"
             title="View local alerts and risk telemetry relative to your current location"
@@ -224,15 +234,16 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
       {/* Mobile: slide-over drawer */}
       {mobileOpen && (
-        <div className="md:hidden fixed inset-0 z-[80]">
-          <button
-            type="button"
-            aria-label="Close navigation"
+        <div className="md:hidden fixed inset-0 z-[80] flex">
+          {/* Backdrop overlay */}
+          <div
             onClick={onClose}
-            className="absolute inset-0 w-full bg-black/60 backdrop-blur-sm cursor-pointer"
+            aria-label="Close navigation"
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm cursor-pointer transition-opacity"
           />
-          <aside className="absolute left-0 top-0 bottom-0 w-[82%] max-w-xs bg-surface-container-lowest border-r border-outline-variant/30 flex flex-col py-panel-padding-standard shadow-2xl">
-            <div className="flex items-center justify-between px-panel-padding-tight pb-2 border-b border-outline-variant/20 shrink-0">
+          {/* Slide-over panel */}
+          <aside className="relative z-10 w-[84%] max-w-xs h-[100dvh] bg-surface-container-lowest border-r border-outline-variant/30 flex flex-col shadow-2xl overflow-hidden">
+            <div className="flex items-center justify-between px-4 py-3.5 border-b border-outline-variant/20 shrink-0 bg-surface-container-low/40">
               <span className="font-label-mono-sm text-label-mono-sm text-outline uppercase tracking-widest font-semibold">
                 Navigation
               </span>
@@ -240,14 +251,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 type="button"
                 onClick={onClose}
                 aria-label="Close navigation"
-                className="w-8 h-8 flex items-center justify-center rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-container transition-colors cursor-pointer"
+                className="w-8 h-8 flex items-center justify-center rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-container transition-colors cursor-pointer active:scale-95 touch-manipulation"
               >
                 <span className="material-symbols-outlined text-[20px]">close</span>
               </button>
             </div>
-            <div className="flex-1 overflow-hidden min-h-0 pt-2">
-              {renderContent()}
-            </div>
+            {renderContent()}
           </aside>
         </div>
       )}

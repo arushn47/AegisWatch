@@ -14,6 +14,7 @@ import {
   AlertTriangle,
   Info,
   ChevronLeft,
+  Zap,
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import {
@@ -285,16 +286,44 @@ export const SettingsClient: React.FC = () => {
   return (
     <div className="min-h-screen bg-surface pb-20">
       {/* Top bar */}
-      <div className="fixed top-0 left-0 right-0 z-50 bg-surface-container-lowest/90 backdrop-blur-md border-b border-outline-variant/20 h-16 flex items-center px-6 md:px-12 gap-4">
-        <Link
-          href="/"
-          className="flex items-center gap-2 text-on-surface-variant hover:text-on-surface transition-colors"
+      <div className="fixed top-0 left-0 right-0 z-50 bg-surface-container-lowest/90 backdrop-blur-md border-b border-outline-variant/20 h-16 flex items-center justify-between px-6 md:px-12">
+        <div className="flex items-center gap-4">
+          <Link
+            href="/"
+            className="flex items-center gap-2 text-on-surface-variant hover:text-on-surface transition-colors"
+          >
+            <ChevronLeft className="w-5 h-5" />
+            <span className="text-sm font-medium">Back to Dashboard</span>
+          </Link>
+          <div className="h-5 w-px bg-outline-variant/40" />
+          <span className="text-sm font-semibold text-on-surface">Settings</span>
+        </div>
+
+        {/* Small Demo Alert button */}
+        <button
+          type="button"
+          onClick={async () => {
+            try {
+              await fetch('/api/push/send', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  title: '🚨 DEMO ALERT: M7.4 Earthquake',
+                  body: 'Simulation Dispatched from Settings telemetry node.',
+                  severity: 'CRITICAL',
+                }),
+              });
+              flash('saved');
+            } catch {
+              // ignore
+            }
+          }}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary/15 hover:bg-primary/25 border border-primary/40 text-primary text-xs font-mono font-semibold transition-all active:scale-95 cursor-pointer shadow-sm touch-manipulation"
+          title="Trigger simulated disaster alert for demo"
         >
-          <ChevronLeft className="w-5 h-5" />
-          <span className="text-sm font-medium">Back to Dashboard</span>
-        </Link>
-        <div className="h-5 w-px bg-outline-variant/40" />
-        <span className="text-sm font-semibold text-on-surface">Settings</span>
+          <Zap className="w-3.5 h-3.5 fill-primary" />
+          <span>Demo Alert</span>
+        </button>
       </div>
 
       <div className="pt-24 px-6 md:px-12 max-w-4xl mx-auto space-y-8">

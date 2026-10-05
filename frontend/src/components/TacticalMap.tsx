@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef, useState, useMemo } from 'react';
 import L from 'leaflet';
-import { Plus, Minus, Maximize2, Navigation, X } from 'lucide-react';
+import { Plus, Minus, Maximize2, Minimize2, Navigation, X } from 'lucide-react';
 import type { DisasterEvent, RegionFocus } from '../types/disaster';
 import { REGION_THEATERS } from '../types/disaster';
 import { normalizeLatitude, normalizeLongitude } from '../lib/geo';
@@ -38,12 +38,34 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
 
   useEffect(() => {
     const handleFullscreenChange = () => {
-      setIsFullscreen(!!document.fullscreenElement);
+      const isFs = !!(document.fullscreenElement || (document as any).webkitFullscreenElement);
+      setIsFullscreen(isFs);
+      if (mapInstanceRef.current) {
+        mapInstanceRef.current.invalidateSize();
+        setTimeout(() => {
+          mapInstanceRef.current?.invalidateSize();
+        }, 100);
+        setTimeout(() => {
+          mapInstanceRef.current?.invalidateSize();
+        }, 300);
+      }
     };
     document.addEventListener('fullscreenchange', handleFullscreenChange);
+    document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
     return () => {
       document.removeEventListener('fullscreenchange', handleFullscreenChange);
+      document.removeEventListener('webkitfullscreenchange', handleFullscreenChange);
     };
+  }, []);
+
+  // ResizeObserver guarantees Leaflet recalculates canvas size whenever container dimensions change
+  useEffect(() => {
+    if (!mapContainerRef.current) return;
+    const ro = new ResizeObserver(() => {
+      mapInstanceRef.current?.invalidateSize();
+    });
+    ro.observe(mapContainerRef.current);
+    return () => ro.disconnect();
   }, []);
 
   // Initialize Leaflet Map
@@ -341,28 +363,19 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
   return (
     <div
       ref={wrapperRef}
-      className="relative w-full h-[460px] sm:h-[500px] lg:h-[540px] bg-surface-container-lowest rounded-xl border border-outline-variant/30 overflow-hidden shadow-2xl"
+      className={`relative w-full bg-surface-container-lowest overflow-hidden shadow-2xl transition-all ${
+        isFullscreen
+          ? 'h-screen w-screen rounded-none border-0'
+          : 'h-[460px] sm:h-[500px] lg:h-[540px] rounded-xl border border-outline-variant/30'
+      }`}
     >
       {/* Actual Leaflet Map Canvas */}
       <div ref={mapContainerRef} className="w-full h-full z-10" />
 
-      {/* Fullscreen Exit Button - Centered top banner */}
-      {isFullscreen && (
-        <button
-          onClick={() => document.exitFullscreen()}
-          className="absolute top-3 left-1/2 -translate-x-1/2 z-50 px-3 py-1.5 rounded-full bg-surface-container-high/90 backdrop-blur-md border border-outline-variant/40 hover:bg-red-500/20 hover:border-red-500/40 text-on-surface hover:text-red-400 flex items-center gap-1.5 shadow-2xl transition-all text-xs font-label-mono-sm uppercase cursor-pointer"
-          title="Exit Fullscreen (Esc)"
-          type="button"
-        >
-          <X className="w-3.5 h-3.5" />
-          <span>Exit Fullscreen</span>
-        </button>
-      )}
-
-      {/* Top Map Operational Header: Live Coverage Badge + Tactical Legend */}
+      {/* Top Map Operational Header: Live Coverage Badge + Tactical Legend + Fullscreen Exit */}
       <div className="absolute top-2.5 sm:top-3 inset-x-2.5 sm:inset-x-3 z-30 flex items-center justify-between gap-2 pointer-events-none">
         {/* Coverage Badge */}
-        <div className="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-full bg-surface-container-low/95 backdrop-blur-md border border-outline-variant/40 shadow-sm pointer-events-auto min-w-0 max-w-[calc(100%-110px)] sm:max-w-none">
+        <div className="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-full bg-surface-container-low/95 backdrop-blur-md border border-outline-variant/40 shadow-sm pointer-events-auto min-w-0 shrink">
           <span className="w-2 h-2 rounded-full bg-primary animate-pulse shrink-0" />
           <span className="font-label-mono-sm text-[11px] sm:text-xs text-on-surface-variant font-medium tracking-wide truncate flex items-center gap-1">
             <span className="hidden md:inline">Live Coverage &bull;</span>
@@ -380,8 +393,28 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
           </span>
         </div>
 
-        {/* Tactical Legend */}
-        <MapLegend incidents={incidents} />
+        {/* Right Action Controls: Tactical Legend & Exit Fullscreen Button */}
+        <div className="flex items-center gap-1.5 sm:gap-2 pointer-events-auto shrink-0">
+          <MapLegend incidents={incidents} />
+
+          {isFullscreen && (
+            <button
+              onClick={() => {
+                if (document.fullscreenElement) {
+                  document.exitFullscreen().catch(() => setIsFullscreen(false));
+                } else {
+                  setIsFullscreen(false);
+                }
+              }}
+              className="flex items-center gap-1 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-full bg-surface-container-high/95 backdrop-blur-md border border-outline-variant/50 hover:bg-error/20 hover:border-error/40 text-on-surface hover:text-error text-[11px] sm:text-xs font-label-mono-sm transition-all shadow-md cursor-pointer active:scale-95 shrink-0"
+              title="Exit Fullscreen (Esc)"
+              type="button"
+            >
+              <X className="w-3.5 h-3.5 text-primary group-hover:text-error" />
+              <span className="font-semibold uppercase tracking-wider">Exit</span>
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Bottom-Left Coordinate & Zoom HUD with normalized coordinates */}
@@ -435,7 +468,11 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
           aria-label={isFullscreen ? 'Exit Fullscreen' : 'Toggle Fullscreen'}
           type="button"
         >
-          <Maximize2 className="w-3.5 h-3.5" />
+          {isFullscreen ? (
+            <Minimize2 className="w-3.5 h-3.5 text-primary" />
+          ) : (
+            <Maximize2 className="w-3.5 h-3.5" />
+          )}
         </button>
       </div>
     </div>

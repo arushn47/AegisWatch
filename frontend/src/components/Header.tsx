@@ -9,7 +9,6 @@ interface HeaderProps {
   onOpenProfile: () => void;
   onOpenAuth: () => void;
   onOpenMenu?: () => void;
-  onSimulateAlert?: () => void;
   user: any | null;
 }
 
@@ -19,7 +18,6 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenProfile,
   onOpenAuth,
   onOpenMenu,
-  onSimulateAlert,
   user,
 }) => {
   return (
@@ -80,21 +78,8 @@ export const Header: React.FC<HeaderProps> = ({
           {/* Vertical Separator */}
           <div className="hidden md:block w-px h-5 bg-outline-variant/30 mx-0.5" />
 
-          {/* User Controls: Demo Alert, Notifications & Profile */}
+          {/* User Controls: Notifications & Profile */}
           <div className="flex items-center gap-2">
-            {onSimulateAlert && (
-              <button
-                onClick={onSimulateAlert}
-                type="button"
-                title="Trigger simulated disaster alert (for project demo & evaluation)"
-                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-primary/15 hover:bg-primary/25 border border-primary/35 hover:border-primary/60 text-primary transition-all font-label-mono-sm text-xs font-semibold cursor-pointer shadow-sm active:scale-95 shrink-0"
-              >
-                <span className="material-symbols-outlined text-[16px] text-primary">
-                  bolt
-                </span>
-                <span className="hidden sm:inline">Demo Alert</span>
-              </button>
-            )}
 
             <button
               onClick={onOpenNotifications}

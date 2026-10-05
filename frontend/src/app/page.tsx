@@ -480,7 +480,6 @@ export default function DashboardPage() {
         onOpenProfile={() => setShowProfileModal(true)}
         onOpenAuth={() => setShowAuthModal(true)}
         onOpenMenu={() => setShowMobileNav(true)}
-        onSimulateAlert={handleSimulateAlert}
         user={user}
       />
 

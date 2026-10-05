@@ -426,10 +426,10 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
     '';
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 select-none">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-0 sm:p-4 select-none">
       <div
         ref={modalRef}
-        className="w-full max-w-4xl h-[82vh] min-h-[520px] max-h-[720px] bg-surface-container-lowest rounded-2xl border border-outline-variant/30 shadow-2xl overflow-hidden flex flex-col md:flex-row relative"
+        className="w-full h-full sm:h-[86vh] sm:max-w-4xl sm:max-h-[720px] bg-surface-container-lowest sm:rounded-2xl border-0 sm:border border-outline-variant/30 shadow-2xl overflow-hidden flex flex-col md:flex-row relative"
       >
         {/* Floating feedback toast */}
         {feedbackMessage && (
@@ -438,8 +438,105 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
           </div>
         )}
 
-        {/* Left Sidebar Navigation */}
-        <div className="md:w-64 bg-surface-container border-b md:border-b-0 md:border-r border-outline-variant/30 flex flex-col relative shrink-0">
+        {/* Mobile Header (visible only on mobile) */}
+        <div className="md:hidden flex items-center justify-between px-4 py-3 border-b border-outline-variant/20 bg-surface-container-low/80 shrink-0">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="w-8 h-8 rounded-full bg-surface-container-high border border-primary/50 overflow-hidden flex items-center justify-center text-primary shrink-0">
+              {displayAvatar ? (
+                <img
+                  src={displayAvatar}
+                  alt={profileData.name}
+                  className="w-full h-full object-cover"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).style.display = 'none';
+                  }}
+                />
+              ) : user?.email ? (
+                <span className="font-label-mono-sm text-xs font-bold text-primary">
+                  {user.email.substring(0, 2).toUpperCase()}
+                </span>
+              ) : (
+                <User className="w-4 h-4 text-on-surface-variant" />
+              )}
+            </div>
+            <div className="min-w-0">
+              <h3 className="font-bold text-sm text-on-surface truncate">
+                Settings
+              </h3>
+              <p className="text-[10px] font-label-mono-sm text-outline truncate max-w-[140px]">
+                {profileData.name || user?.email || 'Operator'}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0">
+            {onSimulateAlert && (
+              <button
+                type="button"
+                onClick={() => {
+                  onSimulateAlert();
+                  setFeedbackMessage('⚡ Demo alert simulated!');
+                }}
+                className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-primary/15 hover:bg-primary/25 border border-primary/40 text-primary text-xs font-label-mono-sm font-semibold transition-all active:scale-95 cursor-pointer shadow-sm touch-manipulation"
+                title="Simulate disaster alert for evaluation"
+              >
+                <Zap className="w-3.5 h-3.5 fill-primary" />
+                <span>Demo</span>
+              </button>
+            )}
+            <button
+              onClick={onClose}
+              type="button"
+              className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-surface-container-high text-on-surface-variant hover:text-on-surface transition-colors bg-surface-container border border-outline-variant/30 cursor-pointer active:scale-95 touch-manipulation"
+              aria-label="Close settings"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+
+        {/* Mobile Tab Bar (visible only on mobile) */}
+        <div className="md:hidden flex items-center p-2 bg-surface-container border-b border-outline-variant/20 gap-1.5 shrink-0 overflow-x-auto">
+          <button
+            type="button"
+            onClick={() => setActiveTab('profile')}
+            className={`flex-1 py-2 px-2.5 rounded-lg text-xs font-medium transition-all flex items-center justify-center gap-1.5 cursor-pointer touch-manipulation ${
+              activeTab === 'profile'
+                ? 'bg-primary text-on-primary font-semibold shadow-sm'
+                : 'text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface'
+            }`}
+          >
+            <User className="w-3.5 h-3.5" />
+            <span>Profile</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('notifications')}
+            className={`flex-1 py-2 px-2.5 rounded-lg text-xs font-medium transition-all flex items-center justify-center gap-1.5 cursor-pointer touch-manipulation ${
+              activeTab === 'notifications'
+                ? 'bg-primary text-on-primary font-semibold shadow-sm'
+                : 'text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface'
+            }`}
+          >
+            <Bell className="w-3.5 h-3.5" />
+            <span>Notifications</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('privacy')}
+            className={`flex-1 py-2 px-2.5 rounded-lg text-xs font-medium transition-all flex items-center justify-center gap-1.5 cursor-pointer touch-manipulation ${
+              activeTab === 'privacy'
+                ? 'bg-primary text-on-primary font-semibold shadow-sm'
+                : 'text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface'
+            }`}
+          >
+            <Shield className="w-3.5 h-3.5" />
+            <span>Privacy</span>
+          </button>
+        </div>
+
+        {/* Desktop Left Sidebar Navigation */}
+        <div className="hidden md:flex w-64 bg-surface-container border-r border-outline-variant/30 flex-col relative shrink-0">
           <div className="p-6 border-b border-outline-variant/20 flex flex-col items-center pt-8">
             <div className="w-20 h-20 rounded-full bg-surface-container-high border-2 border-primary/50 overflow-hidden flex items-center justify-center text-primary mb-3 shadow-[0_0_15px_rgba(76,215,246,0.25)] shrink-0">
               {displayAvatar ? (
@@ -503,7 +600,21 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
             </button>
           </nav>
 
-          <div className="p-3 border-t border-outline-variant/20">
+          <div className="p-3 border-t border-outline-variant/20 flex flex-col gap-2">
+            {onSimulateAlert && (
+              <button
+                type="button"
+                onClick={() => {
+                  onSimulateAlert();
+                  setFeedbackMessage('⚡ Simulated crisis alert dispatched!');
+                }}
+                className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl bg-primary/10 hover:bg-primary/20 border border-primary/30 text-primary transition-colors text-xs font-label-mono-sm font-semibold cursor-pointer shadow-sm active:scale-95"
+                title="Trigger simulated crisis alert"
+              >
+                <Zap className="w-3.5 h-3.5 fill-primary" />
+                <span>Simulate Demo Alert</span>
+              </button>
+            )}
             <button
               onClick={handleLogout}
               type="button"
@@ -515,9 +626,9 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
         </div>
 
         {/* Right Content Area */}
-        <div className="flex-1 flex flex-col relative bg-surface-container-lowest h-full overflow-hidden">
-          {/* Header */}
-          <div className="h-16 border-b border-outline-variant/20 flex items-center justify-between px-6 md:px-8 bg-surface-container-lowest/80 backdrop-blur-md z-10 shrink-0">
+        <div className="flex-1 flex flex-col relative bg-surface-container-lowest h-full overflow-hidden min-h-0">
+          {/* Desktop Header (hidden on mobile) */}
+          <div className="hidden md:flex h-16 border-b border-outline-variant/20 items-center justify-between px-6 md:px-8 bg-surface-container-lowest/80 backdrop-blur-md z-10 shrink-0">
             <h2 className="font-headline-sm text-lg md:text-xl font-bold text-on-surface flex items-center gap-2">
               {activeTab === 'profile' && (
                 <>
@@ -535,18 +646,37 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
                 </>
               )}
             </h2>
-            <button
-              onClick={onClose}
-              type="button"
-              className="w-9 h-9 flex items-center justify-center rounded-xl hover:bg-surface-container-high text-on-surface-variant hover:text-on-surface transition-colors bg-surface-container border border-outline-variant/30 cursor-pointer"
-              aria-label="Close"
-            >
-              <X className="w-4 h-4" />
-            </button>
+            <div className="flex items-center gap-2">
+              {onSimulateAlert && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    onSimulateAlert();
+                    setFeedbackMessage('⚡ Simulated crisis alert dispatched!');
+                  }}
+                  className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-primary/15 hover:bg-primary/25 border border-primary/40 text-primary text-xs font-label-mono-sm font-semibold transition-all active:scale-95 cursor-pointer shadow-sm"
+                  title="Simulate disaster alert for evaluation"
+                >
+                  <Zap className="w-3.5 h-3.5 fill-primary" />
+                  <span>Demo Alert</span>
+                </button>
+              )}
+              <button
+                onClick={onClose}
+                type="button"
+                className="w-9 h-9 flex items-center justify-center rounded-xl hover:bg-surface-container-high text-on-surface-variant hover:text-on-surface transition-colors bg-surface-container border border-outline-variant/30 cursor-pointer"
+                aria-label="Close"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
           </div>
 
           {/* Scrollable Content */}
-          <div className="flex-1 overflow-y-auto p-6 md:p-8 custom-scrollbar relative">
+          <div
+            className="flex-1 overflow-y-auto overscroll-y-contain p-4 sm:p-6 md:p-8 custom-scrollbar relative min-h-0 touch-pan-y"
+            style={{ WebkitOverflowScrolling: 'touch' }}
+          >
             {/* PROFILE TAB */}
             {activeTab === 'profile' && (
               <div className="max-w-2xl mx-auto space-y-6">
@@ -782,19 +912,19 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
 
                 {/* Viva & Evaluation Demo Simulation */}
                 {onSimulateAlert && (
-                  <div className="bg-primary/5 rounded-2xl border border-primary/30 p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mt-4">
-                    <div className="flex gap-3.5 items-center">
-                      <div className="w-10 h-10 rounded-xl bg-primary/10 border border-primary/30 flex items-center justify-center text-primary shrink-0">
-                        <Zap className="w-5 h-5 fill-primary" />
+                  <div className="bg-primary/5 rounded-2xl border border-primary/30 p-3.5 sm:p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mt-4">
+                    <div className="flex gap-3 items-center">
+                      <div className="w-9 h-9 rounded-xl bg-primary/10 border border-primary/30 flex items-center justify-center text-primary shrink-0">
+                        <Zap className="w-4 h-4 fill-primary" />
                       </div>
                       <div>
-                        <h4 className="font-semibold text-on-surface text-sm">Viva & Evaluation Demo Alert</h4>
+                        <h4 className="font-semibold text-on-surface text-sm">Evaluation Demo Alert</h4>
                         <p className="text-xs text-on-surface-variant mt-0.5">
-                          Trigger an immediate simulated crisis alert with audio telemetry, desktop notification, and live map focus.
+                          Trigger simulated crisis alert with audio telemetry, OS notification, and map focus.
                         </p>
                       </div>
                     </div>
-                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 shrink-0 self-end sm:self-center">
+                    <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
                       <button
                         type="button"
                         onClick={async () => {
@@ -815,19 +945,19 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
                           }
                         }}
                         title="Schedules a Web Push in 5 seconds so you can close this tab and watch it appear"
-                        className="px-3 py-2 rounded-xl bg-surface-container-high hover:bg-surface-container-highest border border-outline-variant/40 text-on-surface font-semibold text-xs transition-colors flex items-center justify-center gap-1.5 cursor-pointer shadow-sm"
+                        className="px-2.5 py-1.5 rounded-lg bg-surface-container-high hover:bg-surface-container-highest border border-outline-variant/40 text-on-surface font-semibold text-[11px] transition-colors flex items-center justify-center gap-1 cursor-pointer shadow-sm active:scale-95"
                       >
-                        <Clock className="w-3.5 h-3.5 text-primary" />
-                        Test in 5s (Close Tab)
+                        <Clock className="w-3 h-3 text-primary" />
+                        5s Test
                       </button>
 
                       <button
                         type="button"
                         onClick={() => {
                           onSimulateAlert();
-                          setFeedbackMessage('Simulated crisis alert dispatched!');
+                          setFeedbackMessage('⚡ Simulated crisis alert dispatched!');
                         }}
-                        className="px-3.5 py-2 rounded-xl bg-primary hover:bg-primary/90 text-on-primary font-semibold text-xs transition-colors flex items-center justify-center gap-1.5 cursor-pointer shadow-sm shadow-primary/20"
+                        className="px-3 py-1.5 rounded-lg bg-primary hover:bg-primary/90 text-on-primary font-semibold text-xs transition-colors flex items-center justify-center gap-1.5 cursor-pointer shadow-sm shadow-primary/20 active:scale-95"
                       >
                         <Zap className="w-3.5 h-3.5 fill-current" />
                         Simulate Alert
@@ -976,32 +1106,47 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
           </div>
 
           {/* Footer Actions */}
-          <div className="p-5 border-t border-outline-variant/20 bg-surface-container shrink-0 flex justify-end gap-3 z-10">
+          <div className="p-3.5 sm:p-5 border-t border-outline-variant/20 bg-surface-container shrink-0 flex items-center justify-between gap-3 z-10">
+            {/* Mobile Sign Out Button */}
             <button
-              onClick={onClose}
+              onClick={handleLogout}
               type="button"
-              className="px-5 py-2 rounded-xl text-sm text-on-surface-variant font-medium hover:bg-surface-container-high transition-colors cursor-pointer"
+              className="md:hidden flex items-center gap-1.5 px-3 py-2 rounded-xl text-error hover:bg-error/10 text-xs font-semibold border border-error/30 cursor-pointer active:scale-95"
             >
-              Cancel
+              <LogOut className="w-3.5 h-3.5" />
+              <span>Sign Out</span>
             </button>
-            <button
-              onClick={handleSave}
-              type="button"
-              disabled={saveStatus === 'saving'}
-              className="px-6 py-2 rounded-xl bg-primary hover:bg-primary-fixed text-on-primary text-sm font-bold shadow-lg shadow-primary/20 transition-all flex items-center justify-center min-w-[130px] cursor-pointer disabled:opacity-60"
-            >
-              {saveStatus === 'saving' ? (
-                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-              ) : saveStatus === 'saved' ? (
-                <span className="flex items-center gap-1.5">
-                  <CheckCircle2 className="w-4 h-4" /> Saved!
-                </span>
-              ) : saveStatus === 'error' ? (
-                'Save Failed'
-              ) : (
-                'Save Changes'
-              )}
-            </button>
+
+            {/* Desktop spacer */}
+            <div className="hidden md:block" />
+
+            <div className="flex items-center gap-2.5">
+              <button
+                onClick={onClose}
+                type="button"
+                className="px-4 py-2 rounded-xl text-xs sm:text-sm text-on-surface-variant font-medium hover:bg-surface-container-high transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSave}
+                type="button"
+                disabled={saveStatus === 'saving'}
+                className="px-5 sm:px-6 py-2 rounded-xl bg-primary hover:bg-primary-fixed text-on-primary text-xs sm:text-sm font-bold shadow-lg shadow-primary/20 transition-all flex items-center justify-center min-w-[120px] cursor-pointer disabled:opacity-60 active:scale-95"
+              >
+                {saveStatus === 'saving' ? (
+                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                ) : saveStatus === 'saved' ? (
+                  <span className="flex items-center gap-1.5">
+                    <CheckCircle2 className="w-4 h-4" /> Saved!
+                  </span>
+                ) : saveStatus === 'error' ? (
+                  'Save Failed'
+                ) : (
+                  'Save Changes'
+                )}
+              </button>
+            </div>
           </div>
         </div>
       </div>
