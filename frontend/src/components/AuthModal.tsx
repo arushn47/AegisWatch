@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabase';
+import { ensureUserProfile } from '../lib/preferences';
 import { X, Mail, Lock, ShieldCheck, Zap, ArrowLeft } from 'lucide-react';
 
 type AuthMode = 'login' | 'signup' | 'forgot';
@@ -94,20 +95,22 @@ export const AuthModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
     setNotice(null);
     try {
       if (mode === 'login') {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
+        const { data, error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
+        if (data?.user) {
+          await ensureUserProfile(supabase, data.user);
+        }
         onClose();
       } else if (mode === 'signup') {
+        const displayName = email.split('@')[0];
         const { data, error } = await supabase.auth.signUp({
           email,
           password,
-
-          // The signup trigger reads avatar_url from raw_user_meta_data.
-          // Pass it here so email signups get an avatar the same way Google
-          // signups do (Google populates raw_user_meta_data automatically).
           options: {
             emailRedirectTo: window.location.origin,
             data: {
+              name: displayName,
+              full_name: displayName,
               avatar_url: avatarUrl || null,
             },
           },
@@ -116,8 +119,8 @@ export const AuthModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
         // (e.g. email confirmation flow) does not re-use a stale value.
         if (!error) setAvatarUrl('');
         if (error) throw error;
-        if (data.session) {
-          // Email confirmation is disabled in the project — signed in already.
+        if (data.session?.user) {
+          await ensureUserProfile(supabase, data.session.user);
           onClose();
         } else {
           // Confirmation required: swap to an inline notice instead of alert().

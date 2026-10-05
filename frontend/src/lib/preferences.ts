@@ -12,9 +12,12 @@ import type { DisasterType } from '../types/disaster';
 
 export interface UserProfile {
   id: string;
+  name?: string | null;
   email: string | null;
   full_name: string | null;
   avatar_url: string | null;
+  location?: string | null;
+  tracking_enabled?: boolean | null;
   role: string;
 }
 
@@ -75,7 +78,7 @@ export async function fetchProfile(
   try {
     const { data, error } = await client
       .from('user_profiles')
-      .select('id, email, full_name, avatar_url, role')
+      .select('id, email, name, full_name, avatar_url, location, tracking_enabled, role')
       .eq('id', userId)
       .maybeSingle();
 
@@ -86,7 +89,16 @@ export async function fetchProfile(
 
     if (!data) {
       // The signup trigger has not created a row yet (or schema is missing).
-      return { id: userId, email: null, full_name: null, avatar_url: null, role: 'user' };
+      return {
+        id: userId,
+        email: null,
+        name: null,
+        full_name: null,
+        avatar_url: null,
+        location: null,
+        tracking_enabled: null,
+        role: 'user',
+      };
     }
     return data as UserProfile;
   } catch (err) {
@@ -98,17 +110,101 @@ export async function fetchProfile(
 export async function saveProfile(
   client: SupabaseClient,
   userId: string,
-  patch: { full_name?: string; avatar_url?: string | null }
+  patch: {
+    name?: string;
+    full_name?: string;
+    email?: string | null;
+    avatar_url?: string | null;
+    location?: string | null;
+    tracking_enabled?: boolean | null;
+  }
 ): Promise<WriteResult> {
   try {
+    const nameVal = patch.name || patch.full_name || 'Authorized Operator';
+    const fullNameVal = patch.full_name || patch.name || 'Authorized Operator';
+
+    const payload: Record<string, any> = {
+      id: userId,
+      name: nameVal,
+      full_name: fullNameVal,
+      updated_at: new Date().toISOString(),
+    };
+
+    if (patch.email !== undefined && patch.email !== null) payload.email = patch.email;
+    if (patch.avatar_url !== undefined) payload.avatar_url = patch.avatar_url;
+    if (patch.location !== undefined) payload.location = patch.location;
+    if (patch.tracking_enabled !== undefined) payload.tracking_enabled = patch.tracking_enabled;
+
     const { error } = await client
       .from('user_profiles')
-      .upsert({ id: userId, ...patch, updated_at: new Date().toISOString() });
+      .upsert(payload, { onConflict: 'id' });
 
-    if (error) return { ok: false, reason: 'error', message: error.message };
+    if (error) {
+      console.warn('[preferences] saveProfile error:', error.message);
+      return { ok: false, reason: 'error', message: error.message };
+    }
     return { ok: true };
   } catch (err) {
     return { ok: false, reason: 'not-configured', message: String(err) };
+  }
+}
+
+/**
+ * Ensures the authenticated user exists in the `user_profiles` table.
+ * If missing, upserts them with their email, name, avatar, and defaults.
+ */
+export async function ensureUserProfile(
+  client: SupabaseClient,
+  user: {
+    id: string;
+    email?: string | null;
+    user_metadata?: Record<string, any>;
+  }
+): Promise<UserProfile | null> {
+  if (!user?.id) return null;
+  try {
+    const meta = user.user_metadata || {};
+    const nameVal = meta.full_name || meta.name || user.email?.split('@')[0] || 'Authorized Operator';
+    const emailVal = user.email || `${user.id}@aegiswatch.local`;
+    const avatarVal = meta.avatar_url || meta.picture || null;
+    const locationVal = meta.location || null;
+
+    const { data: existing } = await client
+      .from('user_profiles')
+      .select('*')
+      .eq('id', user.id)
+      .maybeSingle();
+
+    if (!existing) {
+      const { data, error } = await client
+        .from('user_profiles')
+        .upsert(
+          {
+            id: user.id,
+            name: nameVal,
+            full_name: nameVal,
+            email: emailVal,
+            avatar_url: avatarVal,
+            location: locationVal,
+            tracking_enabled: true,
+            role: 'user',
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: 'id' }
+        )
+        .select()
+        .maybeSingle();
+
+      if (error) {
+        console.warn('[preferences] ensureUserProfile failed:', error.message);
+      }
+      return (data as UserProfile) || null;
+    }
+
+    return existing as UserProfile;
+  } catch (err) {
+    console.warn('[preferences] ensureUserProfile error:', err);
+    return null;
   }
 }
 

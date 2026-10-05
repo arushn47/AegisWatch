@@ -6,6 +6,8 @@
  * ever fire. These helpers are the missing request path.
  */
 
+import { supabase, isSupabaseConfigured } from './supabase';
+
 export type NotificationPermissionState = 'unsupported' | 'default' | 'granted' | 'denied';
 
 let registration: ServiceWorkerRegistration | null = null;
@@ -250,6 +252,34 @@ export async function subscribeToWebPush(userId?: string | null): Promise<PushSu
         userId: userId || null,
       }),
     });
+
+    // Also persist directly to Supabase push_subscriptions table if authenticated
+    if (userId && isSupabaseConfigured) {
+      try {
+        const subJSON = subscription.toJSON();
+        if (subJSON.endpoint && subJSON.keys?.p256dh && subJSON.keys?.auth) {
+          const { error: dbErr } = await supabase.from('push_subscriptions').upsert(
+            {
+              user_id: userId,
+              endpoint: subJSON.endpoint,
+              p256dh: subJSON.keys.p256dh,
+              auth: subJSON.keys.auth,
+              user_agent: typeof navigator !== 'undefined' ? navigator.userAgent : null,
+              last_seen_at: new Date().toISOString(),
+            },
+            { onConflict: 'endpoint' }
+          );
+
+          if (dbErr) {
+            console.warn('[pwa] Failed to write push_subscriptions to Supabase:', dbErr.message);
+          } else {
+            console.log('[pwa] Web Push subscription saved to Supabase push_subscriptions table');
+          }
+        }
+      } catch (dbEx) {
+        console.warn('[pwa] push_subscriptions error:', dbEx);
+      }
+    }
 
     return subscription;
   } catch (err) {

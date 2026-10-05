@@ -8,6 +8,7 @@ import {
   saveProfile,
   fetchGlobalPreference,
   updateDeliveryFlags,
+  addSavedLocation,
 } from '../lib/preferences';
 import {
   areDeviceAlertsEnabled,
@@ -151,13 +152,33 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
 
         if (isCancelled) return;
 
-        if (profile?.full_name) {
-          setProfileData((prev) => ({ ...prev, name: profile.full_name as string }));
-        }
-        if (profile?.avatar_url) {
-          setProfileData((prev) => ({ ...prev, avatarUrl: profile.avatar_url as string }));
-        } else if (metaAvatar) {
-          setProfileData((prev) => ({ ...prev, avatarUrl: metaAvatar }));
+        if (profile) {
+          if (profile.name || profile.full_name) {
+            setProfileData((prev) => ({
+              ...prev,
+              name: (profile.name || profile.full_name) as string,
+            }));
+          }
+          if (profile.location) {
+            setProfileData((prev) => ({
+              ...prev,
+              location: profile.location as string,
+            }));
+          }
+          if (profile.avatar_url) {
+            setProfileData((prev) => ({
+              ...prev,
+              avatarUrl: profile.avatar_url as string,
+            }));
+          } else if (metaAvatar) {
+            setProfileData((prev) => ({ ...prev, avatarUrl: metaAvatar }));
+          }
+          if (profile.tracking_enabled !== undefined && profile.tracking_enabled !== null) {
+            setPrivacyData((prev) => ({
+              ...prev,
+              locationAccess: profile.tracking_enabled ? 'always' : 'never',
+            }));
+          }
         }
 
         if (preference) {
@@ -304,20 +325,46 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
     setSaveStatus('saving');
     try {
       if (user?.id) {
-        await Promise.allSettled([
+        const isTracking = privacyData.locationAccess !== 'never';
+
+        // Check if location string has lat, lng coordinates
+        const coordsMatch = profileData.location.match(/(-?\d+\.?\d*)\s*,\s*(-?\d+\.?\d*)/);
+        const lat = coordsMatch ? parseFloat(coordsMatch[1]) : null;
+        const lng = coordsMatch ? parseFloat(coordsMatch[2]) : null;
+
+        const dbPromises: Promise<any>[] = [
           saveProfile(supabase, user.id, {
+            name: profileData.name,
             full_name: profileData.name,
+            email: user.email,
             avatar_url: profileData.avatarUrl.trim() || null,
+            location: profileData.location.trim() || null,
+            tracking_enabled: isTracking,
           }),
           updateDeliveryFlags(supabase, user.id, {
             in_app_enabled: notifData.browserNotifs,
             push_enabled: notifData.pushAlerts,
           }),
-        ]);
+        ];
+
+        // Also save to saved_locations table if coordinates were entered/locked
+        if (lat !== null && lng !== null && !isNaN(lat) && !isNaN(lng)) {
+          dbPromises.push(
+            addSavedLocation(supabase, user.id, {
+              label: 'Primary Station',
+              latitude: lat,
+              longitude: lng,
+              is_primary: true,
+            })
+          );
+        }
+
+        await Promise.allSettled(dbPromises);
       }
 
       const { data, error } = await supabase.auth.updateUser({
         data: {
+          name: profileData.name,
           full_name: profileData.name,
           avatar_url: profileData.avatarUrl.trim() || null,
           picture: profileData.avatarUrl.trim() || null,

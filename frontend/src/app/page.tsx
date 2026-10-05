@@ -17,6 +17,7 @@ import { NotificationCenterModal } from '../components/NotificationCenterModal';
 import { EmergencyDisclaimer } from '../components/EmergencyDisclaimer';
 import { createClient } from '../lib/supabase';
 const supabase = createClient();
+import { ensureUserProfile } from '../lib/preferences';
 import { RelayStatusFooter } from '../components/RelayStatusFooter';
 import {
   showLocalNotification,
@@ -88,14 +89,22 @@ export default function DashboardPage() {
   
   
   useEffect(() => {
-    // Check active session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null);
+    // Check active session & ensure database profile
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      const activeUser = session?.user ?? null;
+      setUser(activeUser);
+      if (activeUser?.id) {
+        await ensureUserProfile(supabase, activeUser);
+      }
     });
 
     // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      const activeUser = session?.user ?? null;
+      setUser(activeUser);
+      if (activeUser?.id) {
+        await ensureUserProfile(supabase, activeUser);
+      }
     });
 
     // Middleware redirects unauthenticated visits to protected routes here
