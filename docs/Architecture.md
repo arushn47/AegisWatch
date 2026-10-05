@@ -1,11 +1,12 @@
-# DisasterWatch — System Architecture & Technical Specification
+# AegisWatch — System Architecture & Technical Specification
 
-**System:** DisasterWatch  
-**Architecture Pattern:** Modular Monolith (Clean Hexagonal Architecture)  
-**Database Architecture:** Relational Spatial Store (PostgreSQL 16 + PostGIS)  
-**Frontend Architecture:** Hybrid Web Application (Next.js 15 App Router + React + TypeScript)  
-**Real-Time Protocol:** Server-Sent Events (SSE)  
-**AI Integration:** Backend-Mediated Context Engine (Google Gemini 1.5/2.0 API)  
+**System:** AegisWatch
+**Architecture Pattern:** Next.js App Router frontend + managed Supabase backend (Auth, PostgreSQL, Realtime, Storage-ready)
+**Database:** Supabase PostgreSQL (workflow tables, RLS, triggers, RPCs, Realtime publication)
+**Frontend Architecture:** Next.js 16 App Router (React 19 + TypeScript) with `'use client'` interactive islands
+**Real-Time:** Supabase Realtime (PostgreSQL replication publication → broadcast to subscribed clients)
+**Auth:** Supabase Auth (email + password, Google OAuth, session refresh middleware)
+**AI Integration:** None in the current build. The app does not call any LLM today; emergency advisory text is deterministic, written by the feed adapters and the notification trigger. (Gemini guidance was in the original roadmap but is not built.)
 
 ---
 
@@ -15,111 +16,119 @@
 flowchart TB
     subgraph ExternalSources["External Authoritative Data Sources"]
         USGS["USGS Earthquakes API<br/>(Real-Time Seismic)"]
-        NASA["NASA EONET & FIRMS<br/>(Fires & Severe Storms)"]
-        GDACS["GDACS Alert Feeds<br/>(Cyclones, Floods, Tsunamis)"]
-        METEO["Open-Meteo Alerts<br/>(Extreme Weather)"]
+        NASA["NASA EONET<br/>(Fires & Severe Storms)"]
+        GDACS["GDACS Alert Feeds<br/>(Cyclones, Floods, Droughts)"]
+        NOAA["NOAA/NWS Tsunami<br/>Atom feeds (via /api/tsunami proxy)"]
+        RW["ReliefWeb (UN OCHA)<br/>opt-in, needs appname"]
     end
 
-    subgraph Backend["Spring Boot 3.x Modular Monolith (Java 21)"]
-        subgraph Ingestion["Ingestion & ETL Pipeline"]
-            SCHED["Spring Task Scheduler<br/>(Adaptive Polling)"]
-            ADAPT["Source Adapters & WebClient"]
-            NORM["Validator & Normalizer<br/>(Common Schema & Dedup)"]
-        end
-
-        subgraph CoreEngines["Core Domain Engines"]
-            DISASTER_SRV["Disaster Service<br/>(CRUD & Spatial Index)"]
-            RISK_ENG["Deterministic Risk Engine<br/>(PostGIS Spatial Queries)"]
-            ASSIST_SRV["Assistance Service<br/>(OSM Overpass / PostGIS)"]
-            AI_CTX["AI Context Builder<br/>(Prompt Guardrails)"]
-            SSE_HUB["SSE Emitter Hub<br/>(Real-Time Stream)"]
-        end
-
-        subgraph SecurityAuth["Security & User Management"]
-            SEC["Spring Security + JWT"]
-            USER_LOC["User Location Profiles"]
-            ALERT_MGR["Alert Preference Manager"]
-        end
+    subgraph Frontend["Next.js 16 App Router Frontend (React 19 + TS)"]
+        RADAR["TacticalMap (Leaflet + ESRI Dark Gray<br/>Canvas, 'use client', ssr:false)"]
+        HUD["Header / Sidebar / KPI Banner /<br/>Incident List / Modals"]
+        AUTH["AuthModal / ProfileModal /<br/>SettingsClient (Supabase Auth)"]
+        NOTIF["NotificationCenterModal<br/>(DB-backed + Realtime)"]
+        PWA["Service Worker Registrar /<br/>PwaStatusWidget (install + push groundwork)"]
     end
 
-    subgraph Storage["Persistent & Caching Layer"]
-        PG[("PostgreSQL 16 + PostGIS<br/>Spatial Tables & Polygons")]
-        REDIS[("Redis 7.x Cache<br/>Active Disasters & Sessions")]
+    subgraph Supabase["Supabase (managed PostgreSQL + Auth + Realtime)"]
+        AUTH_DB["Supabase Auth<br/>(email + Google OAuth,<br/>session refresh via proxy.ts)"]
+        WORKFLOW["Workflow tables<br/>(user_profiles, saved_locations,<br/>alert_preferences, disaster_events,<br/>notifications, push_subscriptions)"]
+        TRIGGER_NEW["fn_handle_new_user()<br/>AFTER INSERT on auth.users<br/>(profile + default preference bootstrap)"]
+        TRIGGER_FANOUT["fn_notify_disaster_event()<br/>AFTER INSERT/UPDATE on disaster_events<br/>(notification fan-out to matching users)"]
+        RPC_INGEST["public.ingest_disaster_events(jsonb)<br/>SECURITY DEFINER upsert of polled events"]
+        RPC_MARK["public.mark_all_notifications_read()<br/>SECURITY DEFINER mark-unread-as-read"]
+        RPC_UPSERT_PREF["public.upsert_global_alert_preference()<br/>SECURITY DEFINER global pref upsert"]
+        RLSPOL["RLS policies (owner-only on<br/>user_profiles, saved_locations,<br/>alert_preferences, notifications,<br/>push_subscriptions; public read on<br/>disaster_events)"]
+        REALTIME_PUB["supabase_realtime publication<br/>(notifications, disaster_events;<br/>notifications replica identity FULL)"]
     end
 
-    subgraph ExternalAI["External AI Services"]
-        GEMINI["Google Gemini API<br/>(Structured Context Guidance)"]
-    end
+    %% Ingestion flow (browser polls feeds, forwards to DB)
+    USGS -->|browser fetch| HUD
+    NASA -->|browser fetch| HUD
+    GDACS -->|browser fetch| HUD
+    NOAA -->|proxy /api/tsunami| HUD
+    RW -->|browser fetch| HUD
 
-    subgraph ClientApp["DisasterWatch Frontend (Next.js 15 App Router + TypeScript)"]
-        RADAR["Tactical Live Radar<br/>(Vector Map: MapLibre / Leaflet)"]
-        HUD["Mission Control HUD<br/>(Active Incidents & Filters)"]
-        RISK_UI["Personal Risk Dashboard<br/>(Proximity & Threat Badges)"]
-        AI_CHAT["Emergency Guidance Drawer<br/>(Gemini Verified Advice)"]
-        ANALYTICS["Research & Trends View<br/>(Recharts Historical)"]
-    end
+    HUD -->|normalize + rpc| RPC_INGEST
+    RPC_INGEST --> WORKFLOW
+    WORKFLOW -->|AFTER INSERT/UPDATE| TRIGGER_FANOUT
+    TRIGGER_FANOUT -->|INSERT| NOTIFICATIONS_DB[(notifications table)]
 
-    %% Data Ingestion Flow
-    USGS --> ADAPT
-    NASA --> ADAPT
-    GDACS --> ADAPT
-    METEO --> ADAPT
-    SCHED --> ADAPT
-    ADAPT --> NORM
-    NORM --> DISASTER_SRV
+    %% Auth flow
+    AUTH -->|signUp / signInWithPassword /<br/>signInWithOAuth| AUTH_DB
+    AUTH_DB -->|AFTER INSERT| TRIGGER_NEW
+    TRIGGER_NEW -->|INSERT| USER_PROFILES_DB[(user_profiles table)]
+    TRIGGER_NEW -->|INSERT| ALERT_PREF_DB[(alert_preferences table)]
 
-    %% Persistence
-    DISASTER_SRV --> PG
-    DISASTER_SRV --> REDIS
-    USER_LOC --> PG
+    %% Realtime
+    NOTIFICATIONS_DB -->|replication| REALTIME_PUB
+    REALTIME_PUB -->|broadcast| NOTIF
 
-    %% Core Services Interconnect
-    DISASTER_SRV --> RISK_ENG
-    PG <--> RISK_ENG
-    RISK_ENG --> SSE_HUB
-    DISASTER_SRV --> SSE_HUB
-
-    %% AI Flow
-    DISASTER_SRV --> AI_CTX
-    RISK_ENG --> AI_CTX
-    AI_CTX --> GEMINI
-
-    %% Client Interactions
-    SSE_HUB -- "SSE Stream (/api/stream/events)" --> ClientApp
-    RADAR <--> DISASTER_SRV
-    HUD <--> DISASTER_SRV
-    RISK_UI <--> RISK_ENG
-    AI_CHAT <--> AI_CTX
-    ANALYTICS <--> DISASTER_SRV
-    ASSIST_SRV <--> RADAR
+    %% Client reads
+    HUD -->|select, public| WORKFLOW
+    NOTIF -->|select, authenticated| NOTIFICATIONS_DB
+    AUTH -->|getUser / onAuthStateChange| AUTH_DB
 ```
 
 ---
 
 ## 2. End-to-End Operational Data Flow
 
-```text
-[1. Trigger]        Spring Scheduler fires cron job (e.g. Every 60s for USGS, 300s for NASA/GDACS).
-                          │
-[2. Ingest]         WebClient pulls GeoJSON/JSON payloads from external APIs asynchronously.
-                          │
-[3. Normalize]      Raw payloads parsed into unified internal model (DisasterEvent) with coordinates,
-                    magnitude, category, severity, and event timestamp.
-                          │
-[4. Deduplicate]    Rule-based deduplication matches overlapping spatial coordinates (≤50km) and
-                    timestamps (≤30min).
-                          │
-[5. Store & Cache]  Persisted to PostgreSQL using PostGIS GEOMETRY(Point, 4326) / Polygons.
-                    Active disaster collection cached in Redis with 60s TTL.
-                          │
-[6. Risk Evaluate]  Deterministic PostGIS query: ST_DWithin and ST_Contains evaluate proximity to
-                    all user-saved locations. Assigns: SAFE | MONITORING | WARNING | HIGH RISK.
-                          │
-[7. Realtime Push]  SSE Hub broadcasts payload to connected browser sessions instantly.
-                          │
-[8. AI Guidance]    When user selects an event or requests safety guidance, Backend Context Builder
-                    supplies strictly verified facts to Google Gemini. Gemini generates structured,
-                    safe, actionable instructions with emergency disclaimers.
+```
+[1. Auth]       User signs up (email or Google) via AuthModal.
+                Email signup: supabase.auth.signUp({ email, password,
+                options: { emailRedirectTo, data: { avatar_url } } }).
+                Google: supabase.auth.signInWithOAuth({ provider: 'google' }).
+
+[2. Auth trigger]  AFTER INSERT on auth.users fires fn_handle_new_user():
+                  - inserts into user_profiles (id, email, full_name, avatar_url)
+                    using ON CONFLICT DO NOTHING (no target) — cannot fail signup
+                    even if user_profiles has no unique index on id.
+                  - inserts the default global alert_preference
+                    (watch everywhere, all types, HIGH+, in-app on) if none exists.
+                  Both inner inserts are wrapped in BEGIN…EXCEPTION so a failure
+                  never rolls back the auth.users insert.
+
+[3. Session]    Browser client (src/lib/supabase.ts, @supabase/ssr
+                createBrowserClient, single cached instance) holds the session.
+                proxy.ts refreshes the session cookie on every request and protects
+                /settings for unauthenticated visits.
+
+[4. Feed poll]  Browser polls the live feeds every 60s:
+                  - USGS (2.5_day + 4.5_week GeoJSON)
+                  - NASA EONET (open events, limit 300)
+                  - GDACS (TC/FL/DR SEARCH, 7-day window, Green/Orange/Red)
+                  - /api/tsunami (proxied NOAA NTWC + PTWC Atom feeds)
+                  - ReliefWeb (only if NEXT_PUBLIC_RELIEFWEB_APPNAME is set)
+
+[5. Normalize]  Each feed adapter normalizes its payload into the unified
+                DisasterEvent shape (id, type, title, locationName, region,
+                coordinates [lat,lng], severity, status, timestamp, timeAgo,
+                summary, metrics, primarySource, externalUrl, sourceFeed,
+                isLiveFeed:true, isIndiaFocus).
+
+[6. Ingest]     Browser calls public.ingest_disaster_events({ p_events: [...]  })
+                (SECURITY DEFINER RPC). Upserts into disaster_events by id.
+                The INSERT/UPDATE fires fn_notify_disaster_event().
+
+[7. Fan-out]    fn_notify_disaster_event() matches each new/updated event against
+                every user's alert_preferences (category membership, min_severity
+                threshold, distance from a saved location when location-bound,
+                30-minute per-event cooldown, dedupe key, 12-hour freshness gate
+                on insert) and inserts a notification row per matching user.
+                Notifications are created only by this SECURITY DEFINER trigger —
+                clients hold no INSERT grant on notifications.
+
+[8. Realtime]   notifications and disaster_events are in the supabase_realtime
+                publication (notifications uses replica identity FULL so UPDATE
+                events carry every column). The NotificationCenterModal subscribes
+                and new rows appear in-app instantly.
+
+[9. Client read]  The dashboard reads disaster_events (public SELECT) to render
+                  the map + incident list + KPI banner + sidebar counts. The
+                  notification center reads notifications (authenticated SELECT,
+                  owner-only RLS). user_profiles + alert_preferences are read by
+                  the profile/settings modals (owner-only RLS).
 ```
 
 ---
@@ -128,297 +137,267 @@ flowchart TB
 
 ### 3.1 Frontend Stack
 
-| Technology | Version | Purpose & Strategic Rationale |
+| Technology | Version | Purpose & Rationale |
 |---|---|---|
-| **Next.js** | `15.x` / `14.x` | Industry-standard React framework (App Router) enabling SSR for public alerts, static generation, built-in routing, and client-side map hydration. |
-| **React** | `19.x` / `18.x` | Modern component-driven UI foundation with concurrent rendering. |
-| **TypeScript** | `5.x` | Strict compile-time typing ensuring zero undefined property errors across complex GeoJSON payloads. |
-| **Tailwind CSS** | `3.4.x` | Utility-first styling configured with custom tactical tokens (`surface-container`, `primary-cyan`, `secondary-crimson`). |
-| **MapLibre GL JS / Leaflet** | `4.x` / `1.9.x` | High-performance open-source vector map rendering running purely client-side via `'use client'`. |
-| **Zustand** | `4.5.x` | Lightweight, unopinionated client-side state management for active filters, selected incidents, and map viewports. |
-| **TanStack Query (React Query)** | `5.x` | Asynchronous server-state management with automatic background refetching and caching. |
-| **Recharts** | `2.12.x` | Monospace-compatible composable chart library for researcher analytics and historical trend views. |
-| **Lucide React / Material Symbols** | Latest | Tactical, crisp SVG iconography for hazard domains and operational controls. |
+| **Next.js** | `16.3.4` (App Router, Turbopack in dev) | React framework with file-based routing, server/client component split, and `'use client'` islands for the interactive map and modals. |
+| **React** | `19.x` | Component foundation. |
+| **TypeScript** | `5.x` (`strict`) | Compile-time safety across GeoJSON payloads and Supabase types. |
+| **Tailwind CSS** | `3.4.x` | Utility styling configured with the Stitch tactical tokens (`surface-container`, `primary`, `tertiary`, `error`, etc.). |
+| **Leaflet** | `1.9.x` | Tile-based map rendering (ESRI World Dark Gray Canvas). Chosen over MapLibre for zero-config dark basemap with no API key. |
+| **Lucide React** | latest | SVG iconography (Mail, Lock, ShieldCheck, Zap, X, User, Bell, MapPin, etc.). |
+| **Material Symbols Outlined** | latest | Notification bell icon in the header. |
+| **`@supabase/ssr`** | latest | `createBrowserClient` + `createServerClient` for session handling across App Router server components, client components, and the proxy middleware. |
+| **next/dynamic** | native | Dynamic import with `ssr: false` for `TacticalMap` so Leaflet never runs during server rendering. |
 
-### 3.2 Backend Stack
+### 3.2 Backend (managed — Supabase)
 
-| Technology | Version | Purpose & Strategic Rationale |
+| Technology | Role | Purpose & Rationale |
 |---|---|---|
-| **Java** | `21 LTS` | Modern enterprise language offering Virtual Threads (Project Loom) for high-concurrency I/O and strong type safety. |
-| **Spring Boot** | `3.2.x` | Production-grade backend framework providing dependency injection, data access, and declarative security. |
-| **Spring Data JPA + Hibernate Spatial** | `3.2.x` | Seamless mapping between Java domain models and PostGIS geospatial database types (`org.locationtech.jts.geom.Point`). |
-| **Spring Security + JWT** | `6.x` | Stateless, token-based authentication and role-based access control (`ROLE_USER`, `ROLE_RESEARCHER`, `ROLE_ADMIN`). |
-| **Spring WebClient** | `3.2.x` | Non-blocking reactive HTTP client designed for parallel asynchronous ingestion from multiple international APIs. |
-| **Spring Scheduler** | `3.2.x` | Cron and fixed-delay job scheduling with thread pooling for external source polling. |
-| **Server-Sent Events (SSE)** | Native | Lightweight unidirectional real-time event streaming over standard HTTP; eliminates WebSocket handshake overhead for monitoring. |
+| **Supabase Auth** | Authentication | Email + password signup/login, Google OAuth, email confirmation, password reset. Session refresh is done in `proxy.ts` (App Router middleware renamed from `middleware.ts`). |
+| **PostgreSQL (Supabase)** | Database | Holds the workflow tables (`user_profiles`, `saved_locations`, `alert_preferences`, `disaster_events`, `notifications`, `push_subscriptions`), RLS policies, triggers, and RPCs. |
+| **Supabase Realtime** | Real-time | `supabase_realtime` publication streams `notifications` and `disaster_events` to subscribed clients. `notifications` uses replica identity `FULL`. |
+| **Supabase Storage (ready)** | File storage (future) | Bucket + RLS for avatar file uploads is not wired yet; avatars are URL-based today. `push_subscriptions` table is present for the Web Push phase. |
 
-### 3.3 Database & Spatial Infrastructure
-
-| Technology | Version | Purpose & Strategic Rationale |
-|---|---|---|
-| **PostgreSQL** | `16.x` | Industry gold-standard ACID relational database. |
-| **PostGIS Extension** | `3.4.x` | Spatial database extender enabling indexed distance queries (`ST_DWithin`), point-in-polygon checks (`ST_Contains`), and spatial bounding box queries. |
-| **Redis** | `7.x` | High-throughput in-memory data store for caching active disaster list, rate limiting, and session blacklists. |
-
-### 3.4 AI Integration Layer
-
-| Technology | Model | Purpose & Strategic Rationale |
-|---|---|---|
-| **Google Gemini API** | `gemini-1.5-flash` / `gemini-1.5-pro` | Translates structured verified disaster context into human-readable safety briefs. Handled **strictly server-side** to protect API keys and constrain prompt output. |
+### 3.3 What is NOT in the build (honest)
+- **No Java/Spring Boot server.** The original roadmap described one; the project's actual backend converged on Supabase.
+- **No PostGIS.** Spatial work uses a pure-arithmetic haversine km function (`fn_haversine_km`) and bounding-box checks, not PostGIS geometry types. This keeps the schema independent of extension provisioning.
+- **No Gemini / AI guidance.** The app does not call any LLM today. Advisory text is deterministic.
+- **No Web Push delivery yet.** `push_subscriptions` table exists; the subscription + send flow is a later phase.
+- **No avatar file upload yet.** Avatars are URL-based today (paste a URL, or get one from Google).
 
 ---
 
 ## 4. Repository & Directory Structure
 
-DisasterWatch adopts a structured **Monorepo** layout separating the React client, Spring Boot backend, infrastructure configs, and documentation:
-
 ```text
 DisasterWatch/
-├── .github/
-│   └── workflows/
-│       ├── frontend-ci.yml             # Build and test frontend
-│       └── backend-ci.yml              # Maven build and JUnit spatial tests
-│
-├── frontend/                           # React + TypeScript + Vite Client
-│   ├── public/
-│   │   ├── favicon.ico
-│   │   └── sounds/                     # Subtle tactical alert audio chimes
+├── frontend/                     # Next.js 16 App Router client
 │   ├── src/
-│   │   ├── assets/                     # Logos, static vector SVGs
-│   │   ├── components/                 # Atomic UI primitives
-│   │   │   ├── common/                 # Buttons, Badges, Modals, Loaders
-│   │   │   ├── layout/                 # Tactical Header, Sidebar Nav, HUD Overlays
-│   │   │   └── map/                    # MapLibre/Leaflet canvas, Markers, Beacons
-│   │   ├── features/                   # Domain-driven feature modules
-│   │   │   ├── disasters/              # Incident list, Filter pills, Telemetry card
-│   │   │   ├── risk/                   # User risk meter, Location cards, Hazard HUD
-│   │   │   ├── ai-assistant/           # Gemini guidance drawer, Checklist generator
-│   │   │   ├── assistance/             # Nearby hospitals, shelters, route links
-│   │   │   └── analytics/              # Recharts trends, severity distributions
-│   │   ├── hooks/                      # Custom React hooks (useSSE, useGeolocation)
-│   │   ├── services/                   # Axios/Fetch API client wrappers
-│   │   ├── store/                      # Zustand state stores (incidentStore, filterStore)
-│   │   ├── types/                      # TypeScript schemas & GeoJSON types
-│   │   ├── styles/                     # Tailwind custom design tokens & animations
-│   │   ├── App.tsx                     # Primary route coordinator
-│   │   └── main.tsx                    # Application entry point
-│   ├── index.html                      # HTML5 shell with Google Fonts
-│   ├── package.json
-│   ├── tailwind.config.js              # Stitch Tactical color palette config
-│   ├── tsconfig.json
-│   └── vite.config.ts
-│
-├── backend/                            # Spring Boot 3.x Application
-│   ├── src/
-│   │   ├── main/
-│   │   │   ├── java/com/disasterwatch/
-│   │   │   │   ├── DisasterWatchApplication.java
-│   │   │   │   ├── common/             # Global exceptions, Base entities, Constants
-│   │   │   │   ├── config/             # SecurityConfig, RedisConfig, PostGisConfig
-│   │   │   │   ├── auth/               # JWT filter, UserDetailsService, AuthController
-│   │   │   │   ├── user/               # User entity, Repository, ProfileService
-│   │   │   │   ├── disaster/           # DisasterEvent entity, Repository, Controller
-│   │   │   │   ├── ingestion/          # External API Adapters (USGS, NASA, GDACS)
-│   │   │   │   ├── normalization/      # GeoJSON parsers, Deduplication service
-│   │   │   │   ├── risk/               # PostGIS Spatial Engine, RiskAssessmentService
-│   │   │   │   ├── alerts/             # NotificationService, SSE Emitter Registry
-│   │   │   │   ├── assistance/         # Overpass OSM integration, ShelterService
-│   │   │   │   ├── ai/                 # Gemini Client, Prompt Templates, ContextBuilder
-│   │   │   │   └── analytics/          # Aggregation queries, TrendService
-│   │   │   └── resources/
-│   │   │       ├── application.yml     # Spring profiles (dev, prod)
-│   │   │       └── db/migration/       # Flyway SQL migrations with PostGIS extensions
-│   │   └── test/                       # Unit & Spatial Integration tests
-│   └── pom.xml                         # Maven dependencies
-│
-├── infrastructure/                     # Containerization & Deployment
-│   ├── docker-compose.yml              # Local multi-container development environment
-│   ├── Dockerfile.frontend
-│   ├── Dockerfile.backend
-│   └── init-postgis.sql                # PostGIS initialization script
-│
-├── PRD.md                              # Product Requirements Document
-├── Architecture.md                     # System Architecture & Technical Specs
-├── Rules.md                            # Development & AI Guardrail Rules
-├── Phases.md                           # Phased Milestone Roadmap
-├── Design.md                           # Tactical Design System & Tokens
-├── Memory.md                           # Active Session State (initialized on coding)
-└── README.md                           # Project Overview & Setup Guide
+│   │   ├── app/                  # App Router routes
+│   │   │   ├── page.tsx          # Dashboard hub
+│   │   │   ├── layout.tsx        # Root layout (fonts, meta, providers)
+│   │   │   ├── settings/page.tsx # Settings shell
+│   │   │   ├── reset-password/   # Password reset confirmation
+│   │   │   └── api/tsunami/route.ts  # NOAA/NWS tsunami feed proxy
+│   │   ├── components/           # UI components
+│   │   │   ├── AuthModal.tsx
+│   │   │   ├── ProfileModal.tsx
+│   │   │   ├── SettingsClient.tsx
+│   │   │   ├── Header.tsx
+│   │   │   ├── Sidebar.tsx
+│   │   │   ├── KPIBanner.tsx
+│   │   │   ├── FilterBar.tsx
+│   │   │   ├── TacticalMap.tsx
+│   │   │   ├── IncidentList.tsx
+│   │   │   ├── IncidentDetailModal.tsx
+│   │   │   ├── NearbyAlertsModal.tsx
+│   │   │   ├── RecentAlertsModal.tsx
+│   │   │   ├── NotificationCenterModal.tsx
+│   │   │   ├── EmergencyDisclaimer.tsx
+│   │   │   ├── PwaStatusWidget.tsx
+│   │   │   └── RelayStatusFooter.tsx
+│   │   ├── lib/
+│   │   │   ├── supabase.ts       # Single canonical browser Supabase client (@supabase/ssr)
+│   │   │   ├── preferences.ts    # user_profiles + alert_preferences data layer
+│   │   │   ├── notifications.ts  # notifications read + mark-read + Realtime subscribe
+│   │   │   └── pwa.ts            # Service worker + notification helpers
+│   │   ├── services/
+│   │   │   └── disasterService.ts# Feed adapters (USGS, NASA EONET, GDACS, tsunami, ReliefWeb)
+│   │   │                          # + aggregation, India focus, counts
+│   │   ├── types/
+│   │   │   └── disaster.ts       # DisasterEvent, DisasterType, severity, status, etc.
+│   │   ├── utils/supabase/
+│   │   │   ├── client.ts         # Delegates to src/lib/supabase.ts
+│   │   │   ├── server.ts         # createServerClient for SSR/route handlers
+│   │   │   └── middleware.ts     # (legacy name; the live middleware is src/proxy.ts)
+│   │   └── proxy.ts              # App Router middleware: session refresh + /settings protection
+│   ├── public/                   # Icons, manifest, offline fallback
+│   ├── supabase/                 # (top-level convenience copy of the SQL files)
+│   ├── .env                      # LOCAL ONLY — Supabase URL + anon key + service_role key (not in git)
+│   ├── next.config.mjs
+│   └── package.json
+├── supabase/
+│   ├── schema.sql                # Idempotent full schema (tables, RLS, triggers, RPCs, grants, Realtime)
+│   ├── fix-signup.sql            # Signup-recovery trigger fix (run in SQL Editor if signup breaks)
+│   └── .env                      # LOCAL ONLY — service_role key for applying schema (not in git)
+├── docs/
+│   ├── STATUS.md                 # Current system deliverables & talking points
+│   ├── Memory.md                 # Active session state
+│   ├── Architecture.md           # This file
+│   ├── Phases.md                 # Roadmap (rewritten around Supabase)
+│   ├── PRD.md                    # Product vision (see §8 reconciliation note)
+│   ├── Design.md                 # Stitch design tokens (unchanged, still accurate)
+│   └── Rules.md                  # Dev + AI safety guardrails (updated to real stack)
+├── .env.example                  # Supabase env var blueprint (committed)
+└── README.md                     # Project overview & quick start
 ```
 
 ---
 
-## 5. Relational Database Schema (PostgreSQL + PostGIS)
+## 5. Database Schema (Supabase PostgreSQL)
 
 ```mermaid
 erDiagram
-    USERS ||--o{ SAVED_LOCATIONS : "registers"
-    USERS ||--o{ ALERT_PREFERENCES : "configures"
-    USERS ||--o{ NOTIFICATIONS : "receives"
-    SAVED_LOCATIONS ||--o{ RISK_ASSESSMENTS : "evaluated for"
-    DISASTER_EVENTS ||--o{ RISK_ASSESSMENTS : "triggers"
-    DISASTER_EVENTS ||--o{ DISASTER_SOURCE_RECORDS : "ingested via"
-    DISASTER_EVENTS ||--o{ NOTIFICATIONS : "generates"
+    auth_users ||--o{ user_profiles : "mirrored by fn_handle_new_user trigger"
+    auth_users ||--o{ saved_locations : "owner"
+    auth_users ||--o{ alert_preferences : "owner"
+    auth_users ||--o{ notifications : "recipient"
+    auth_users ||--o{ push_subscriptions : "owner"
+    disaster_events ||--o{ notifications : "generates via fn_notify_disaster_event"
+    saved_locations ||--o{ alert_preferences : "location-bound preference"
 
-    USERS {
+    auth_users {
         uuid id PK
-        string email UK
-        string password_hash
-        string full_name
+        string email
+        string email_confirmed_at
         string role
+        jsonb raw_user_meta_data
         timestamp created_at
-        timestamp updated_at
     }
 
-    SAVED_LOCATIONS {
+    user_profiles {
+        uuid id PK FK auth.users(id) ON DELETE CASCADE
+        text email UK
+        text full_name
+        text avatar_url
+        text role default 'user'
+        timestamptz created_at
+        timestamptz updated_at
+    }
+
+    saved_locations {
         uuid id PK
-        uuid user_id FK
-        string label
-        geometry coordinates "GEOMETRY(Point, 4326)"
+        uuid user_id FK auth.users(id) ON DELETE CASCADE
+        text label
         double latitude
         double longitude
         boolean is_primary
-        timestamp created_at
+        timestamptz created_at
     }
 
-    DISASTER_EVENTS {
+    alert_preferences {
         uuid id PK
-        string disaster_type "EARTHQUAKE, WILDFIRE, CYCLONE, FLOOD, TSUNAMI"
-        string title
-        string severity "LOW, MEDIUM, HIGH, CRITICAL"
-        string status "ACTIVE, MONITORING, RESOLVED"
-        geometry location "GEOMETRY(Point, 4326)"
-        geometry affected_polygon "GEOMETRY(Polygon, 4326)"
-        jsonb metrics "magnitude, depth, windSpeed, etc."
-        string primary_source
-        string source_event_id
-        timestamp event_time
-        timestamp created_at
-        timestamp updated_at
+        uuid user_id FK auth.users(id) ON DELETE CASCADE
+        uuid location_id FK saved_locations(id) ON DELETE CASCADE (nullable = global)
+        text[] disaster_types default '{}'
+        integer radius_km default 500
+        text min_severity default 'MEDIUM'
+        boolean in_app_enabled default true
+        boolean push_enabled default false
+        boolean email_enabled default false
+        timestamptz created_at
+        timestamptz updated_at
     }
 
-    DISASTER_SOURCE_RECORDS {
-        uuid id PK
-        uuid disaster_event_id FK
-        string source_name
-        string external_id
-        jsonb raw_payload
-        timestamp fetched_at
+    disaster_events {
+        text id PK (upstream id, e.g. 'usgs-abc123')
+        text type
+        text title
+        text location_name
+        text region
+        double latitude
+        double longitude
+        text severity default 'LOW'
+        text status default 'ACTIVE'
+        text summary
+        text primary_source
+        text external_url
+        jsonb metrics default '{}'
+        text source_feed
+        timestamptz occurred_at
+        timestamptz created_at
+        timestamptz updated_at
     }
 
-    RISK_ASSESSMENTS {
+    notifications {
         uuid id PK
-        uuid user_id FK
-        uuid location_id FK
-        uuid disaster_event_id FK
-        string risk_level "SAFE, MONITORING, WARNING, HIGH_RISK"
-        double distance_km
-        string explanation
-        timestamp calculated_at
+        uuid user_id FK auth.users(id) ON DELETE CASCADE
+        text disaster_event_id FK disaster_events(id) ON DELETE CASCADE
+        text risk_level
+        text title
+        text body
+        boolean is_read default false
+        text channel default 'in_app'
+        text dedupe_key
+        timestamptz created_at
+        timestamptz read_at
     }
 
-    ALERT_PREFERENCES {
+    push_subscriptions {
         uuid id PK
-        uuid user_id FK
-        uuid location_id FK
-        string[] disaster_types
-        double radius_km
-        string min_severity
-        boolean push_enabled
-        boolean in_app_enabled
-    }
-
-    NOTIFICATIONS {
-        uuid id PK
-        uuid user_id FK
-        uuid disaster_event_id FK
-        string risk_level
-        string title
-        string body
-        boolean is_read
-        timestamp created_at
-    }
-
-    ASSISTANCE_RESOURCES {
-        uuid id PK
-        string name
-        string category "HOSPITAL, SHELTER, FIRE_STATION, RELIEF_CAMP"
-        geometry location "GEOMETRY(Point, 4326)"
-        string address
-        string phone
-        string source
-        timestamp verified_at
+        uuid user_id FK auth.users(id) ON DELETE CASCADE
+        text endpoint UK
+        text p256dh
+        text auth
+        text user_agent
+        timestamptz created_at
+        timestamptz last_seen_at
     }
 ```
 
----
-
-## 6. API Specifications (RESTful & Real-Time)
-
-### 6.1 Disaster Monitoring Endpoints
-
-| Method | Endpoint | Description | Access |
-|---|---|---|---|
-| `GET` | `/api/v1/disasters/active` | Retrieve all currently active disaster events with coordinates and metrics | Public |
-| `GET` | `/api/v1/disasters/{id}` | Retrieve comprehensive detail for a single disaster incident | Public |
-| `GET` | `/api/v1/disasters/nearby` | Spatial query returning events within radius: `?lat=35.67&lng=139.65&radiusKm=250` | Public |
-| `GET` | `/api/v1/disasters/filter` | Multi-criteria query: `?type=EARTHQUAKE&minSeverity=HIGH&timeRange=24h` | Public |
-
-### 6.2 Deterministic Risk Engine Endpoints
-
-| Method | Endpoint | Description | Access |
-|---|---|---|---|
-| `POST` | `/api/v1/risk/evaluate` | Deterministic spatial evaluation for arbitrary coordinates: `{ lat, lng }` | Public |
-| `GET` | `/api/v1/risk/my-locations` | Evaluates active hazards against all user-registered saved locations | User |
-
-### 6.3 Real-Time Streaming Endpoints
-
-| Method | Endpoint | Description | Access |
-|---|---|---|---|
-| `GET` | `/api/v1/stream/events` | Server-Sent Events (SSE) stream emitting real-time updates: `DISASTER_CREATED`, `DISASTER_UPDATED`, `RISK_ALERT` | Public / User |
-
-### 6.4 AI Emergency Guidance Endpoints
-
-| Method | Endpoint | Description | Access |
-|---|---|---|---|
-| `POST` | `/api/v1/ai/guidance` | Generates verified AI safety advice for a specific event + user risk context: `{ eventId, userLocationId }` | Public / User |
-
-### 6.5 Nearby Emergency Resources Endpoints
-
-| Method | Endpoint | Description | Access |
-|---|---|---|---|
-| `GET` | `/api/v1/assistance/nearby` | Queries hospitals, shelters, and fire stations within radius: `?lat=...&lng=...&category=HOSPITAL` | Public |
+### 5.1 Key schema details
+- **`user_profiles`**: `id` references `auth.users(id)` and is the primary key. `email` is unique. A hand-created table may lack a unique index on `id`; `schema.sql` contains a defensive block that creates `user_profiles_id_uidx` if missing (and skips with a warning on duplicate key).
+- **`alert_preferences`**: one global row (`location_id IS NULL`) + one per saved location. Enforced with two partial unique indexes (`alert_preferences_global_uidx` where `location_id IS NULL`, `alert_preferences_location_uidx` where `location_id IS NOT NULL`) because a plain UNIQUE can't express the "NULL = global" semantics.
+- **`notifications`**: unique index on `(user_id, dedupe_key)` so a dedupe-key collision silently drops a repeat (`ON CONFLICT (user_id, dedupe_key) DO NOTHING`). No INSERT RLS policy — notifications are only ever created by the `fn_notify_disaster_event()` trigger (SECURITY DEFINER).
+- **`disaster_events`**: `id` is the upstream event id, so ingestion is idempotent (`ON CONFLICT (id) DO UPDATE SET ...` in `ingest_disaster_events`).
 
 ---
 
-## 7. Security Architecture & Deployment Topology
+## 6. API Specifications
 
-### 7.1 Security Architecture
-- **Stateless Authentication**: JWT tokens generated upon `/api/v1/auth/login`, signed with HMAC-SHA256.
-- **Role-Based Authorizations**:
-  - `ROLE_USER`: Manage saved locations, alert preferences, view personalized risk assessments.
-  - `ROLE_RESEARCHER`: Access raw longitudinal analytical datasets and export endpoints.
-  - `ROLE_ADMIN`: Manually trigger ingestion adapters, view system telemetry, update shelter records.
-- **CORS Configuration**: Restrict allowed origins in production to the verified client domain.
-- **Content Security Policy (CSP)**: Strict headers permitting tile layer loading from certified MapLibre/OSM CDN endpoints while forbidding inline eval.
+### 6.1 Supabase client-side calls (the real "API")
 
-### 7.2 Containerized Deployment Architecture
+| Operation | Supabase call | Access |
+|---|---|---|
+| Sign up (email) | `supabase.auth.signUp({ email, password, options: { emailRedirectTo, data: { avatar_url } } })` | anon |
+| Sign in (email) | `supabase.auth.signInWithPassword({ email, password })` | anon |
+| Sign in (Google) | `supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo } })` | anon |
+| Reset password | `supabase.auth.resetPasswordForEmail(email, { redirectTo })` | anon |
+| Current user | `supabase.auth.getUser()` / `supabase.auth.onAuthStateChange()` | anon (gets session) |
+| Update profile metadata | `supabase.auth.updateUser({ data: { full_name, location, ... } })` | authenticated |
+| Update password | `supabase.auth.updateUser({ password })` | authenticated |
+| Read own profile | `client.from('user_profiles').select(...).eq('id', userId).maybeSingle()` | authenticated (RLS) |
+| Save own profile | `client.from('user_profiles').upsert({ id, full_name, avatar_url, updated_at })` | authenticated (RLS) |
+| Read own alert prefs | `client.from('alert_preferences').select(...).eq('user_id', userId)...` | authenticated (RLS) |
+| Upsert global pref | `client.rpc('upsert_global_alert_preference', { p_disaster_types, p_min_severity, p_radius_km, p_in_app_enabled, p_push_enabled })` | authenticated (RPC grant) |
+| Read notifications | `client.from('notifications').select(...).eq('user_id', userId)...` | authenticated (RLS) |
+| Mark all read | `client.rpc('mark_all_notifications_read')` | authenticated (RPC grant) |
+| Ingest polled events | `client.rpc('ingest_disaster_events', { p_events: [...] })` | anon + authenticated (RPC grant) |
+| Read disaster events | `client.from('disaster_events').select(...)` | anon + authenticated (public SELECT) |
 
-```text
-Host Server (Docker Compose)
-│
-├── Container: dw-frontend (Nginx Alpine)
-│   ├── Serves Vite production build
-│   └── Reverse proxies /api/* and /api/v1/stream/* to backend
-│
-├── Container: dw-backend (Eclipse Temurin JRE 21)
-│   ├── Spring Boot 3.x application JAR
-│   └── Configured with environment variables (DB, Redis, Gemini API Key)
-│
-├── Container: dw-postgres (postgis/postgis:16-3.4-alpine)
-│   ├── Persistent Docker volume (pg_data)
-│   └── Spatial indexes (GIST) on all geometry columns
-│
-└── Container: dw-redis (redis:7-alpine)
-    └── In-memory cache with eviction policy (allkeys-lru)
-```
+### 6.2 Route handlers (Next.js App Router)
+- **`GET /api/tsunami`** — proxies NOAA/NWS NTWC + PTWC Atom feeds (no CORS otherwise), caches for 120s (`revalidate = 120`), returns `{ feeds: [{ id, centre, xml }] }`. Parsing is deliberately left to the client (DOMParser handles namespaces correctly).
+
+### 6.3 Supabase RPCs (SECURITY DEFINER)
+- **`ingest_disaster_events(p_events jsonb) -> integer`** — upserts an array of normalized events into `disaster_events` by id; returns the count of rows inserted/updated.
+- **`mark_all_notifications_read() -> integer`** — marks the current user's unread notifications read; returns the count.
+- **`upsert_global_alert_preference(p_disaster_types, p_min_severity, p_radius_km, p_in_app_enabled, p_push_enabled) -> alert_preferences`** — upserts the current user's global alert preference (handles the partial unique index correctly).
+
+---
+
+## 7. Real-Time & Notifications
+
+- **Publication:** `supabase_realtime`. `schema.sql` adds `notifications` and `disaster_events` to it if they're not already present, and sets `notifications` replica identity to `FULL`.
+- **What streams:** new and mutated `notifications` rows (so marking a notification read propagates), and `disaster_events` changes.
+- **Client subscription:** `NotificationCenterModal` calls `subscribeToNotifications(supabase, userId, (row) => ...)` and prepends newly arrived rows to the local list, plus fires a browser notification via the PWA `showLocalNotification` helper when permitted.
+- **Fan-out trigger:** `fn_notify_disaster_event()` runs AFTER INSERT or UPDATE on `disaster_events`. Deterministic matching only:
+  - hazard category membership (`disaster_types` array or empty = all),
+  - min_severity threshold (via `fn_severity_rank`),
+  - distance from a saved location when the preference is location-bound (via `fn_haversine_km`),
+  - 30-minute per-event cooldown (skip if a notification for this event was created in the last 30 minutes),
+  - dedupe key (`<event_id>:<severity>:<status>`) so a severity escalation still notifies while repeats of the same state are dropped,
+  - 12-hour freshness gate on INSERT (backfill rows older than 12h are not announced; severity escalations on existing events still notify).
+
+---
+
+## 8. Reconciliation Note (PRD vs. Reality)
+
+The original `PRD.md` and roadmap describe a **Java 21 + Spring Boot 3.x backend with PostgreSQL + PostGIS + Redis**, with Spring Security JWT auth, SSE real-time, and a Gemini AI guidance phase. That architecture is **not** what is running.
+
+The live runtime is:
+- **Frontend:** Next.js 16 (App Router) + React 19 + TypeScript + Tailwind CSS + Leaflet.
+- **Backend:** Supabase (Auth + PostgreSQL workflow tables + Realtime + Storage-ready). No separate application server.
+- **Real-time:** Supabase Realtime (PostgreSQL replication publication), not SSE.
+- **AI guidance:** not built. Advisory text is deterministic.
+
+The PRD's product *vision* (multi-source ingestion, deterministic risk, explainer guidance, nearby assistance, historical analytics) still stands as the aspiration. The implementation has taken a different — and currently working — shape around Supabase. Faculty reviewing the docs should read `STATUS.md` and `Memory.md` as the source of truth for what is actually running, and treat `PRD.md` §1–§7 as the product vision and `PRD.md` §8 (once added) as the reconciliation.

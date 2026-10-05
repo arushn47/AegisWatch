@@ -1,0 +1,53 @@
+{
+  "name": "AegisWatch — Global Disaster Intelligence",
+  "short_name": "AegisWatch",
+  "description": "Real-time multi-hazard telemetry, global situational radar and emergency decision support.",
+  "id": "/",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
+  "orientation": "any",
+  "background_color": "#0a0e16",
+  "theme_color": "#0f131c",
+  "lang": "en",
+  "dir": "ltr",
+  "categories": ["news", "weather", "utilities", "productivity"],
+  "prefer_related_applications": false,
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Live Global Map",
+      "short_name": "Live Map",
+      "description": "Open the real-time situational radar",
+      "url": "/",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png" }]
+    },
+    {
+      "name": "Data Sources",
+      "short_name": "Sources",
+      "description": "Review every feed and API AegisWatch consumes",
+      "url": "/resources",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png" }]
+    }
+  ]
+}

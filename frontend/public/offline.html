@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="en" class="dark">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Offline — AegisWatch</title>
+    <link rel="icon" type="image/png" href="/icons/icon-192.png" />
+    <style>
+      :root {
+        color-scheme: dark;
+        --surface: #0f131c;
+        --surface-low: #181c24;
+        --container: #1c2028;
+        --outline: #3d494c;
+        --primary: #4cd7f6;
+        --on-surface: #dfe2ee;
+        --variant: #bcc9cd;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: grid;
+        place-items: center;
+        background: radial-gradient(circle at 50% 25%, #141b26 0%, var(--surface) 65%);
+        color: var(--on-surface);
+        font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+        padding: 1.5rem;
+      }
+      main {
+        width: 100%;
+        max-width: 26rem;
+        background: var(--container);
+        border: 1px solid var(--outline);
+        border-radius: 0.75rem;
+        padding: 2rem;
+        text-align: center;
+      }
+      .mark {
+        width: 64px;
+        height: 64px;
+        margin: 0 auto 1.25rem;
+        border-radius: 1rem;
+        border: 1px solid rgba(76, 215, 246, 0.35);
+        background: rgba(76, 215, 246, 0.08);
+        display: grid;
+        place-items: center;
+      }
+      .pulse {
+        width: 14px;
+        height: 14px;
+        border-radius: 999px;
+        background: var(--primary);
+        box-shadow: 0 0 0 0 rgba(76, 215, 246, 0.6);
+        animation: ping 1.6s ease-out infinite;
+      }
+      @keyframes ping {
+        0% { box-shadow: 0 0 0 0 rgba(76, 215, 246, 0.55); }
+        100% { box-shadow: 0 0 0 22px rgba(76, 215, 246, 0); }
+      }
+      h1 {
+        font-size: 1.15rem;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        margin: 0 0 0.5rem;
+      }
+      p {
+        color: var(--variant);
+        font-size: 0.9rem;
+        line-height: 1.6;
+        margin: 0 0 1.5rem;
+      }
+      button {
+        width: 100%;
+        padding: 0.8rem 1rem;
+        border: 0;
+        border-radius: 0.5rem;
+        background: var(--primary);
+        color: #003640;
+        font-weight: 600;
+        font-size: 0.9rem;
+        cursor: pointer;
+      }
+      button:hover { background: #acedff; }
+      .note {
+        margin-top: 1.5rem;
+        padding-top: 1.25rem;
+        border-top: 1px solid var(--outline);
+        font-size: 0.7rem;
+        line-height: 1.5;
+        color: #869397;
+        text-align: left;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <div class="mark"><span class="pulse"></span></div>
+      <h1>Telemetry Link Lost</h1>
+      <p>
+        AegisWatch cannot reach the network, so live hazard feeds are paused.
+        Your cached shell is still available.
+      </p>
+      <button onclick="location.reload()">Retry connection</button>
+      <p class="note">
+        DisasterWatch is an informational decision-support tool. It does not
+        replace official emergency broadcast systems or lawful instructions
+        from civil defense authorities.
+      </p>
+    </main>
+  </body>
+</html>

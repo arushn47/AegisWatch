@@ -1,201 +1,230 @@
-# DisasterWatch — Phased Implementation Roadmap
+# AegisWatch — Phased Implementation Roadmap
 
-**Project Scope:** Final Year Capstone Project  
-**Strategic Focus:** Agile Delivery with a High-Impact Working Prototype for the **Monday Exhibition Review**  
-**Version:** 1.0.0  
+**Project Scope:** Final Year Capstone Project
+**Strategic Focus:** Agile Delivery with a High-Impact Working Prototype for the **Monday Exhibition Review**
+**Version:** 2.0.0 (rewritten around the real Supabase-backed runtime)
 
 ---
 
 ## Roadmap Overview
 
 ```text
-┌────────────────────────────────────────────────────────────────────────┐
-│ PHASE 1 (CURRENT): FOUNDATION & TACTICAL RADAR (MONDAY MILESTONE)      │
-│ • Monorepo Scaffolding (React + TS + Vite + Tailwind Tactical Tokens)  │
-│ • Interactive Global Vector Map with Live USGS Data + Simulated Feeds  │
-│ • Hazard Domain Filtering, Incident Cards & Telemetry HUD              │
-│ • Full Architectural & Technical Documentation for Faculty Review      │
-└───────────────────────────────────┬────────────────────────────────────┘
+┌────────────────────────────────────────────────────────────────────────────┐
+│ PHASE 1 (CURRENT): TACTICAL RADAR + SUPABASE AUTH + DB-BACKED NOTIFICATIONS │
+│ • Next.js 16 App Router frontend (React 19 + TS + Tailwind + Leaflet)        │
+│ • Stitch Mission Control layout (Header, Sidebar, KPI, Incident List)         │
+│ • Live multi-hazard feeds: USGS, NASA EONET, GDACS, NOAA tsunami, ReliefWeb  │
+│ • Supabase Auth (email + Google OAuth) + session-refresh middleware           │
+│ • Supabase DB workflow tables (user_profiles, alert_preferences, notifications)│
+│ • Signup trigger (fn_handle_new_user) + notification fan-out trigger           │
+│ • Realtime notification center + PWA/service-worker groundwork                │
+│ • Avatar capture (signup URL / Google metadata / profile + settings edit)      │
+│ • India region coverage (GDACS tags + tightened coordinate box)               │
+│ • Static incidents removed — only live feeds, honest empty states             │
+└───────────────────────────────────┬────────────────────────────────────────┘
                                     │
                                     ▼
-┌────────────────────────────────────────────────────────────────────────┐
-│ PHASE 2: SPRING BOOT BACKEND & MULTI-SOURCE INGESTION                  │
-│ • Java 21 + Spring Boot 3.x Scaffolding & WebClient Adapters           │
-│ • USGS, NASA EONET, GDACS, Open-Meteo Normalization Pipeline          │
-│ • Deduplication Engine (Spatial Proximity & Temporal Windows)          │
-└───────────────────────────────────┬────────────────────────────────────┘
+┌────────────────────────────────────────────────────────────────────────────┐
+│ PHASE 2: AVATAR FILE UPLOAD + WEB PUSH DELIVERY                              │
+│ • Supabase Storage bucket for avatar uploads (RLS: users own their files)     │
+│ • File picker in profile modal + storage URL written to user_profiles.avatar_url│
+│ • Web Push subscription flow (push_subscriptions table + VAPID)               │
+│ • Push delivery from the notification trigger (web_push channel)              │
+└───────────────────────────────────┬────────────────────────────────────────┘
                                     │
                                     ▼
-┌────────────────────────────────────────────────────────────────────────┐
-│ PHASE 3: POSTGRESQL + POSTGIS DETERMINISTIC RISK ENGINE                │
-│ • Spatial Schemas (Point & Polygon Geometry with GIST Indexes)         │
-│ • Deterministic Spatial Proximity Rules (SAFE, MONITORING, etc.)       │
-│ • Mathematical Rationale Generation with Mandatory Disclaimers         │
-└───────────────────────────────────┬────────────────────────────────────┘
+┌────────────────────────────────────────────────────────────────────────────┐
+│ PHASE 3: SAVED LOCATIONS UX + ALERT PREFERENCES POLISH                       │
+│ • Add/manage saved locations in settings (lat/lng + geolocation pickup)        │
+│ • Per-location alert preferences (which hazards, radius, min severity)         │
+│ • Map markers for saved locations + primary-location indicator                 │
+│ • Honest empty-state messaging when a region view has no live events           │
+└───────────────────────────────────┬────────────────────────────────────────┘
                                     │
                                     ▼
-┌────────────────────────────────────────────────────────────────────────┐
-│ PHASE 4: USER AUTHENTICATION & LOCATION PROFILES                       │
-│ • Spring Security 6 + Stateless JWT Auth (User, Researcher, Admin)    │
-│ • Saved Location Management (Home, Campus, Travel Destinations)        │
-│ • Personalized Hazard Assessment Dashboard                             │
-└───────────────────────────────────┬────────────────────────────────────┘
+┌────────────────────────────────────────────────────────────────────────────┐
+│ PHASE 4: INCIDENT CARD DETAIL + SOURCE-FEED CHIPS + INDIA COVERAGE POLISH     │
+│ • Show each event's live source feed (usgs, gdacs, nasa_eonet, noaa_ntwc,     │
+│   reliefweb) as a small chip on the incident card                             │
+│ • India text-match detection (feed titles/regions that name India) as a third  │
+│   signal alongside country tags + coordinate box                              │
+│ • India region empty-state messaging (live from GDACS/USGS/NASA; currently     │
+│   quiet is the honest state)                                                 │
+└───────────────────────────────────┬────────────────────────────────────────┘
                                     │
                                     ▼
-┌────────────────────────────────────────────────────────────────────────┐
-│ PHASE 5: REAL-TIME STREAMING & ALERT DISPATCH                          │
-│ • Server-Sent Events (SSE) Unidirectional Event Hub                    │
-│ • Real-time Radar Push Updates & In-App Notification Drawer            │
-│ • Browser Web Push API Integration                                     │
-└───────────────────────────────────┬────────────────────────────────────┘
+┌────────────────────────────────────────────────────────────────────────────┐
+│ PHASE 5: RELIEFWEB DEFAULT-ON + ADDITIONAL LIVE FEEDS                         │
+│ • Make ReliefWeb usable by default where an appname is available              │
+│ • Evaluate additional India-relevant live sources (IMD bulletins if            │
+│   machine-readable, national disaster feeds where terms allow)                │
+│ • Feed health indicators in the relay status footer (per-feed latency/errors)  │
+└───────────────────────────────────┬────────────────────────────────────────┘
                                     │
                                     ▼
-┌────────────────────────────────────────────────────────────────────────┐
-│ PHASE 6: GOOGLE GEMINI AI EMERGENCY GUIDANCE                           │
-│ • Server-Side AI Context Builder with Safety Prompt Boundaries         │
-│ • Plain-Language Situation Summaries & Evacuation Checklists          │
-│ • Anti-Hallucination Constraints & Official Hotline Verification       │
-└───────────────────────────────────┬────────────────────────────────────┘
+┌────────────────────────────────────────────────────────────────────────────┐
+│ PHASE 6: DETERMINISTIC RISK + PROXIMITY (Supabase-side, no PostGIS required)  │
+│ • Deterministic proximity evaluation in the DB (haversine + bounding boxes)    │
+│ • Per-user risk summary API (which active events are near my saved locations)  │
+│ • Risk tiers on incident cards / notification body text                       │
+│ • Mandatory civil-protection disclaimer on every risk view                    │
+└───────────────────────────────────┬────────────────────────────────────────┘
                                     │
                                     ▼
-┌────────────────────────────────────────────────────────────────────────┐
-│ PHASE 7: NEARBY EMERGENCY ASSISTANCE SERVICE                           │
-│ • OpenStreetMap Overpass API Ingestion (Hospitals, Shelters, Stations) │
-│ • Spatial Radius Distance Sorting & Navigational Directions            │
-└───────────────────────────────────┬────────────────────────────────────┘
+┌────────────────────────────────────────────────────────────────────────────┐
+│ PHASE 7: AI EMERGENCY GUIDANCE (OPTIONAL — ONLY IF FACULTY WANT IT)          │
+│ • If desired: a backend-mediated explainer over verified event facts          │
+│ • No LLM ever determines risk; deterministic proximity already does that       │
+│ • Mandatory disclaimer + anti-hallucination constraints                       │
+└───────────────────────────────────┬────────────────────────────────────────┘
                                     │
                                     ▼
-┌────────────────────────────────────────────────────────────────────────┐
-│ PHASE 8: RESEARCH & HISTORICAL ANALYTICS DASHBOARD                     │
-│ • Recharts Interactive Historical Views (Frequency, Depth, Trends)     │
-│ • Geographic Hazard Density Maps & Dataset Export (GeoJSON/CSV)        │
-└───────────────────────────────────┬────────────────────────────────────┘
+┌────────────────────────────────────────────────────────────────────────────┐
+│ PHASE 8: RESEARCH & HISTORICAL ANALYTICS                                     │
+│ • Historical aggregation of ingested disaster_events (by type, severity,       │
+│   region, India-focus) over time                                             │
+│ • Recharts tactical views (frequency, severity distribution, India vs global) │
+│ • Dataset export (GeoJSON / CSV) of the ingested event history                 │
+└───────────────────────────────────┬────────────────────────────────────────┘
                                     │
                                     ▼
-┌────────────────────────────────────────────────────────────────────────┐
-│ PHASE 9: CONTAINERIZATION, REHEARSAL & CAPSTONE DEFENSE                │
-│ • Multi-Container Docker Compose (Frontend, Backend, PostGIS, Redis)   │
-│ • End-to-End Latency Optimization & Final Demonstration Rehearsal      │
-└────────────────────────────────────────────────────────────────────────┘
+┌────────────────────────────────────────────────────────────────────────────┐
+│ PHASE 9: POLISH, REPRODUCIBILITY & EXHIBITION REHEARSAL                      │
+│ • Single reproducible Supabase deploy path (CLI/API apply of schema.sql so     │
+│   the repo and the live project can't drift)                                 │
+│ • .env.example + local-setup instructions so a fresh clone can run            │
+│ • End-to-end demo script + slide deck + architecture diagrams                 │
+│ • Final rehearsal against the live feeds (no static placeholders)             │
+└────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## Phase 1: Foundation & Tactical Radar Dashboard (Target: Monday Demo)
-**Goal:** Deliver a visually stunning, responsive, interactive web application matching the Stitch Mission Control designs that runs smoothly for faculty presentation.
+## Phase 1: Tactical Radar + Supabase Auth + DB-Backed Notifications (Current Working State)
+
+**Goal:** Deliver a visually stunning, responsive, interactive web application matching the Stitch Mission Control designs, backed by a real auth + database + notifications stack, with only live feeds (no static placeholders).
 
 ### Deliverables:
 1. **Repository & Build Setup**:
-   - Modern Vite + React 18 + TypeScript environment initialized in `frontend/`.
-   - Tailwind CSS configured with the complete tactical color palette and typography from `Design.md`.
-   - Material Symbols and JetBrains Mono fonts linked for zero layout jitter.
-2. **Tactical Mission Control Layout**:
-   - Global navigation header with operational status indicators (`SYSTEM OPERATIONAL`, `LIVE TELEMETRY ACTIVE`, UTC clock).
-   - Collapsible tactical sidebar featuring domain navigation (Earthquakes, Wildfires, Cyclones, Floods, Tsunamis).
-3. **Interactive Global Radar Map**:
-   - Integrated vector map (MapLibre GL JS / Leaflet) styled with high-contrast dark basemaps.
-   - Pulsing beacon markers color-coded by hazard domain and severity (Crimson for High Risk, Amber for Warning, Cyan for Monitoring).
-   - Click-to-pan interaction linking map markers to incident details.
-4. **Live & Simulated Multi-Hazard Data Stream**:
-   - Live real-time ingestion from the official USGS Earthquake API (`earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_day.geojson`).
-   - High-fidelity simulated feeds for active wildfires (Sierra Complex), cyclones (Remal), and major floods (Rio Grande do Sul) directly aligned with the Stitch design specifications.
-5. **Incident Card Stack & Telemetry HUD**:
-   - Filter pills (All Disasters, Earthquakes, Wildfires, Cyclones, Floods) with live badge counts.
-   - Expandable incident cards displaying magnitude, focal depth, affected area, and elapsed time.
-   - Telemetry HUD showing cursor geo-coordinates (Lat/Long) and satellite sync status.
-6. **Documentation & Memory Baseline**:
-   - Complete `PRD.md`, `Architecture.md`, `Rules.md`, `Phases.md`, `Design.md`, and initialized `Memory.md` ready for faculty inspection.
+   - Next.js 16 (App Router, Turbopack in dev) + React 19 + TypeScript + Tailwind CSS in `frontend/`.
+   - Tailwind configured with the complete Stitch tactical color palette and typography.
+   - Material Symbols and JetBrains Mono + Plus Jakarta Sans + Inter fonts.
+   - `.env.example` committed; real `.env` (Supabase URL + anon key + service_role key) is local-only.
+2. **Tactical Mission Control Layout (Exact Stitch Parity)**:
+   - Header with operational status indicators (`SYSTEM OPERATIONAL`, `LIVE TELEMETRY ACTIVE`), notification bell + unread count, settings trigger, user avatar badge (image when `avatar_url` is set, initials fallback otherwise).
+   - Sidebar with domain filters and region switcher (Global / South Asia · India).
+   - KPI banner, incident list, incident detail modal, nearby alerts modal, recent alerts modal, notification center modal, emergency disclaimer, PWA status widget, relay status footer.
+3. **Interactive Global Radar Map** (`TacticalMap.tsx`, `'use client'`, `ssr: false`):
+   - ESRI World Dark Gray Canvas basemap (zero watermark, zero API key).
+   - Pulsing beacon markers color-coded by hazard domain + severity.
+   - Click-to-pan to incident coordinates.
+4. **Live Multi-Hazard Data Stream (real feeds only — no static fixtures)**:
+   - **USGS** — global earthquakes (M2.5+, past 24h) + Indian subcontinent / Himalayan belt significant quakes (M4.5+, past 7 days).
+   - **NASA EONET** — open natural events (wildfires, storms, floods, volcanoes, landslides, temperature extremes, drought, snow).
+   - **GDACS** (UN/EC) — tropical cyclones, floods, droughts with alert levels + affected countries. **Primary India coverage source.**
+   - **NOAA/NWS tsunami advisories** — NTWC Palmer + PTWC Honolulu, proxied through `/api/tsunami`, parsed client-side with DOMParser. Only Warning/Advisory/Watch emitted.
+   - **ReliefWeb (UN OCHA)** — opt-in, requires approved `NEXT_PUBLIC_RELIEFWEB_APPNAME`.
+5. **Supabase Auth** (`src/lib/supabase.ts` + `src/utils/supabase/`):
+   - Single canonical browser client (`@supabase/ssr` `createBrowserClient`, cached).
+   - Server client in `src/utils/supabase/server.ts`.
+   - `src/proxy.ts` (renamed from `middleware.ts`) refreshes the session on every request + protects `/settings`.
+   - Email signup (with optional `avatar_url` in `options.data`), email login, Google OAuth, password reset.
+6. **Signup trigger fix** (`supabase/fix-signup.sql`):
+   - Replaced the broken `fn_handle_new_user()` (which used `ON CONFLICT (id) DO UPDATE` against a `user_profiles` table with no unique index on `id`, aborting every signup) with a version that uses `ON CONFLICT DO NOTHING` + per-insert `BEGIN … EXCEPTION` blocks so a profile/preference failure never rolls back auth.
+7. **Database-backed notification center + Realtime**:
+   - `notifications` table populated by `fn_notify_disaster_event()` trigger on `disaster_events` (fan-out to every user whose `alert_preferences` match, with a 30-minute cooldown, dedupe key, and 12-hour freshness gate on insert).
+   - Notification Center Modal reads from DB + streams new rows over Realtime.
+   - `mark_all_notifications_read()` + `upsert_global_alert_preference()` RPCs.
+8. **User profile + settings (DB-backed)**:
+   - `user_profiles` (id, email, full_name, avatar_url, role, timestamps) + `alert_preferences` (global + per-location rows, disaster_types, radius_km, min_severity, delivery flags) with RLS + owner-only policies.
+   - Profile Modal + Settings both read/write `full_name` + `avatar_url` to `user_profiles` and delivery flags to `alert_preferences`.
+9. **Avatar capture**:
+   - Optional avatar URL on email signup (`options.data.avatar_url`), automatic from Google OAuth metadata, editable in Profile Modal and Settings, rendered in header badge.
+10. **India region coverage fixed**:
+    - Country tags authoritative (ISO `IND`/`IN` only).
+    - Coordinate fallback box tightened to India's bounding box (lat 6.5–35.7°N, lng 68.1–97.4°E, including Andaman & Nicobar), excluding Afghanistan, Pakistan, and China.
+11. **Static incidents removed**:
+    - Deleted the hardcoded `Kosi Basin Monsoon Inundation` fixture. India view now shows only live feed content (honestly empty when there are no India events).
 
 ---
 
-## Phase 2: Backend Scaffolding & Multi-Source Ingestion Pipeline
-**Goal:** Establish the Spring Boot 3.x backend and build decoupled, fault-tolerant ingestion adapters.
+## Phase 2: Avatar File Upload + Web Push Delivery
 
 ### Deliverables:
-1. Spring Boot 3.2+ Maven project setup with Java 21 virtual threads.
-2. `IngestionAdapter` interface with specialized implementations:
-   - `UsgsEarthquakeAdapter`: Consuming real-time GeoJSON streams.
-   - `NasaEonetAdapter`: Ingesting wildfire and storm events.
-   - `GdacsAlertAdapter`: Fetching international flood, tsunami, and cyclone bulletins.
-   - `OpenMeteoAdapter`: Capturing extreme atmospheric data.
-3. Normalization Service mapping raw payloads to the unified `DisasterEvent` domain entity.
-4. Spatial & temporal deduplication service.
-5. In-memory resilience and circuit breakers using Resilience4j.
+1. Supabase Storage bucket for avatars (public or private-with-signed-url), RLS so users can only read/write their own files.
+2. File picker in the profile modal + storage URL written to `user_profiles.avatar_url` (replacing the paste-a-URL-only flow).
+3. Remove-avatar affordance.
+4. Web Push subscription flow: `push_subscriptions` table + VAPID keys + subscription from the browser, stored per-user.
+5. Push delivery from the notification trigger (`web_push` channel) when a matching event generates a notification.
 
 ---
 
-## Phase 3: PostgreSQL + PostGIS Geospatial Risk Engine
-**Goal:** Implement the deterministic geospatial database and sub-100ms risk evaluation queries.
+## Phase 3: Saved Locations UX + Alert Preferences Polish
 
 ### Deliverables:
-1. Dockerized PostgreSQL 16 instance with PostGIS 3.4 enabled.
-2. Flyway database migration scripts creating spatial tables and GIST indexes.
-3. PostGIS spatial calculation queries:
-   - `ST_DWithin` for radius threshold checks.
-   - `ST_Contains` for polygon boundary intersections.
-4. Deterministic Risk Evaluation Service outputting `SAFE`, `MONITORING`, `WARNING`, and `HIGH RISK` classifications.
-5. Unit and integration tests validating geometric boundary edge cases.
+1. Add/manage saved locations in settings (label + lat/lng + geolocation pickup button).
+2. Per-location alert preferences (which hazard types, radius, min severity) in addition to the global row.
+3. Map markers for saved locations + primary-location indicator.
+4. Honest empty-state messaging when a region view (especially India) has no live events.
 
 ---
 
-## Phase 4: User Authentication & Monitored Location Profiles
-**Goal:** Enable user registration, security, and personalized location-based monitoring.
+## Phase 4: Incident Card Detail + Source-Feed Chips + India Coverage Polish
 
 ### Deliverables:
-1. Spring Security 6.x configuration with stateless JWT authentication filters.
-2. User management endpoints (`/api/v1/auth/register`, `/api/v1/auth/login`, `/api/v1/auth/me`).
-3. User location profile management (`/api/v1/locations` CRUD).
-4. Personalized risk evaluation endpoint (`/api/v1/risk/my-locations`).
-5. Frontend "My Locations" dashboard view.
+1. Show each event's live source feed (`sourceFeed`: `usgs`, `gdacs`, `nasa_eonet`, `noaa_ntwc`, `reliefweb`) as a small chip on the incident card and in the detail modal.
+2. India text-match detection as a third signal: feed titles/regions that name India count as India-focus even when ISO tags are absent (in addition to country tags + coordinate box).
+3. India region empty-state messaging: "Live from GDACS, USGS, and NASA EONET — no India events right now."
 
 ---
 
-## Phase 5: Real-Time Event Streaming & Notification Engine
-**Goal:** Push live hazard updates to connected clients without page reloads.
+## Phase 5: ReliefWeb Default-On + Additional Live Feeds
 
 ### Deliverables:
-1. Spring Boot Server-Sent Events (SSE) `/api/v1/stream/events` controller with an active `SseEmitter` registry.
-2. Frontend `useSSE` hook with auto-reconnection and event dispatching.
-3. Interactive In-App Notification Center with read/unread tracking.
-4. Web Push API integration for critical hazard threshold alerts.
+1. Make ReliefWeb usable by default where an `appname` is available (graceful no-op otherwise).
+2. Evaluate additional India-relevant live sources where terms allow (e.g. IMD bulletins if machine-readable; national disaster feeds where the terms permit automated access).
+3. Per-feed health indicators in the relay status footer (latency, last-error).
 
 ---
 
-## Phase 6: Google Gemini AI Emergency Guidance
-**Goal:** Provide plain-language, contextualized emergency safety checklists using Google Gemini.
+## Phase 6: Deterministic Risk + Proximity (Supabase-side, no PostGIS required)
 
 ### Deliverables:
-1. Backend `AiContextBuilder` assembling verified disaster telemetry and user proximity facts.
-2. Google Gemini API integration with strict system prompts forbidding risk recalculation or fake emergency numbers.
-3. REST endpoint `/api/v1/ai/guidance`.
-4. Frontend Emergency Guidance Drawer featuring bulleted action items, evacuation kit checklists, and official emergency disclaimers.
+1. Deterministic proximity evaluation in the DB using the existing `fn_haversine_km` + bounding-box helpers (no PostGIS extension needed).
+2. Per-user risk summary: which active `disaster_events` are near the user's saved locations, by distance band.
+3. Risk tier shown on incident cards / notification body text (e.g. "74 km from your saved location — monitor").
+4. Mandatory civil-protection disclaimer on every risk view (already present via `EmergencyDisclaimer.tsx`; extend to risk surfaces).
 
 ---
 
-## Phase 7: Nearby Emergency Assistance Service
-**Goal:** Help users discover nearest hospitals, shelters, and relief centers.
+## Phase 7: AI Emergency Guidance (Optional — only if faculty want it)
 
 ### Deliverables:
-1. OpenStreetMap Overpass API integration to harvest public medical and relief infrastructure.
-2. Proximity search endpoint `/api/v1/assistance/nearby`.
-3. Frontend Assistance Map Layer with category filters (Hospitals, Shelters, Fire Stations) and external directions links.
+1. If desired: a backend-mediated explainer over verified event facts only.
+2. No LLM ever determines risk — deterministic proximity (Phase 6) already does that.
+3. Mandatory disclaimer + anti-hallucination constraints (no invented emergency numbers, no invented shelter capacity).
 
 ---
 
-## Phase 8: Research & Historical Analytics Dashboard
-**Goal:** Enable longitudinal multi-hazard analysis for academic researchers.
+## Phase 8: Research & Historical Analytics
 
 ### Deliverables:
-1. Historical aggregation queries in Spring Data JPA (frequency by year/month, severity distribution).
-2. Frontend Research View built with Recharts (monospaced axes, dark mode styling).
-3. Data export utilities (GeoJSON and CSV).
+1. Historical aggregation of ingested `disaster_events` (by type, severity, region, India-focus) over time.
+2. Recharts tactical views (frequency, severity distribution, India vs global).
+3. Dataset export (GeoJSON / CSV) of the ingested event history.
 
 ---
 
-## Phase 9: Containerization, Final Polish & Capstone Defense
-**Goal:** Package the entire system for production and prepare presentation assets.
+## Phase 9: Polish, Reproducibility & Exhibition Rehearsal
 
 ### Deliverables:
-1. Unified `docker-compose.yml` spinning up Frontend, Backend, PostGIS, and Redis.
-2. Comprehensive end-to-end testing and performance audits.
-3. Project Exhibition slide deck, architecture diagrams, and live defense demonstration script.
+1. Single reproducible Supabase deploy path: a script (CLI/API) that applies `supabase/schema.sql` + `supabase/fix-signup.sql` to the live project so the repo and the live project can't drift.
+2. `.env.example` + local-setup instructions so a fresh clone can run (right now the real `.env` is local-only).
+3. End-to-end demo script + slide deck + architecture diagrams.
+4. Final rehearsal against the live feeds (no static placeholders, honest empty states).
+
+---
+
+## How the roadmap differs from the original
+
+The original roadmap described a **Java 21 + Spring Boot 3.x backend with PostgreSQL + PostGIS + Redis**, Spring Security JWT auth, SSE real-time, and a Gemini AI guidance phase. The project's actual runtime converged on **Supabase** instead (Next.js App Router frontend + managed Supabase backend for auth, DB, Realtime, and Storage-ready). The phases above reflect what is actually being built. The product *vision* from the PRD (multi-source ingestion, deterministic risk, explainer guidance, nearby assistance, historical analytics) is still the aspiration; the implementation path to get there is different — and currently working.

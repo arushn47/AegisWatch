@@ -187,6 +187,35 @@ To safeguard project completion and maintain absolute safety compliance, Disaste
 ## 8. Release Roadmap Overview
 
 ```text
+Phase 1: Tactical Radar + Supabase Auth + DB-backed notifications (Next.js 16 + Supabase) — Monday Exhibition
+Phase 2: Avatar file upload (Supabase Storage) + Web Push delivery
+Phase 3: Saved locations UX + alert preferences polish
+Phase 4: Incident source-feed chips + India coverage polish
+Phase 5: ReliefWeb default-on + additional live feeds
+Phase 6: Deterministic risk + proximity (Supabase-side, no PostGIS required)
+Phase 7: AI emergency guidance (optional — only if faculty want it)
+Phase 8: Research & historical analytics (Recharts + export)
+Phase 9: Polish, reproducible Supabase deploy + exhibition rehearsal
+```
+
+### 8.1 Current Runtime (authoritative — read this before the old roadmap below)
+
+The PRD below and the original roadmap describe a **Java 21 + Spring Boot 3.x backend with PostgreSQL + PostGIS + Redis**, Spring Security JWT auth, SSE real-time, and a Google Gemini AI guidance phase. **That is not what is running.** The live runtime is:
+
+- **Frontend:** Next.js 16 (App Router) + React 19 + TypeScript + Tailwind CSS + Leaflet.
+- **Backend:** Supabase (Auth + PostgreSQL workflow tables + Realtime + Storage-ready). There is no separate Java application server.
+- **Real-time:** Supabase Realtime (PostgreSQL replication publication), not SSE.
+- **AI guidance:** not built. Advisory text on incidents and in the emergency disclaimer is deterministic, written by the feed adapters and the notification trigger. The app does not call any LLM today.
+
+For the authoritative view of what is actually running, see **[STATUS.md](STATUS.md)** and **[Memory.md](Memory.md)**. For the real architecture, see **[Architecture.md](Architecture.md)** (rewritten). For the real roadmap, see **[Phases.md](Phases.md)** (rewritten).
+
+### 8.2 Why the implementation diverged from the original roadmap
+
+The original roadmap assumed a self-hosted Spring Boot backend. The project's actual runtime converged on Supabase instead, because it delivered a working auth + database + Realtime notifications stack faster than bootstrapping a separate application server, and it kept the demo focused on the live-feed + notification UX rather than infrastructure plumbing. The deterministic-risk and AI-guidance aspirations from the PRD are preserved as later phases (Phase 6 and the optional Phase 7), implemented in Supabase SQL / RPCs rather than a Java engine.
+
+### 8.3 Old roadmap (kept for traceability — do not treat as current)
+
+```text
 Phase 1: Tactical Radar Dashboard & Live USGS Seismic Feed (Monday Exhibition Milestone)
 Phase 2: Multi-Source Ingestion Pipeline (NASA EONET, GDACS, Open-Meteo, FIRMS)
 Phase 3: PostGIS Deterministic Risk Engine & Spatial Radius Logic

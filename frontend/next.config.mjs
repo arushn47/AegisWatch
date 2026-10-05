@@ -1,16 +1,24 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  eslint: {
-    // Warning: This allows production builds to successfully complete even if
-    // your project has ESLint errors.
-    ignoreDuringBuilds: true,
-  },
-  typescript: {
-    // !! WARN !!
-    // Dangerously allow production builds to successfully complete even if
-    // your project has type errors.
-    // !! WARN !!
-    ignoreBuildErrors: true,
+  // Type errors now fail the build (the codebase is at 0 `tsc` errors).
+  // Do not re-enable `typescript.ignoreBuildErrors`.
+  reactStrictMode: true,
+  async headers() {
+    return [
+      {
+        // The service worker must never be served stale, and it needs to be
+        // able to control the whole origin.
+        source: '/sw.js',
+        headers: [
+          { key: 'Cache-Control', value: 'no-cache, no-store, must-revalidate' },
+          { key: 'Service-Worker-Allowed', value: '/' },
+        ],
+      },
+      {
+        source: '/manifest.json',
+        headers: [{ key: 'Content-Type', value: 'application/manifest+json' }],
+      },
+    ];
   },
 };
 

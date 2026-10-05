@@ -1,15 +1,22 @@
-import React, { useState, useEffect } from 'react';
-import { AlertTriangle, CheckCircle } from 'lucide-react';
+import React from 'react';
+import { CheckCircle, Zap } from 'lucide-react';
 import type { DisasterEvent } from '../types/disaster';
 
 interface RecentAlertsModalProps {
   incidents: DisasterEvent[];
   onClose: () => void;
   onMarkRead: () => void;
+  onSimulateAlert?: () => void;
   lastReadTime: number;
 }
 
-export const RecentAlertsModal: React.FC<RecentAlertsModalProps> = ({ incidents, onClose, onMarkRead, lastReadTime }) => {
+export const RecentAlertsModal: React.FC<RecentAlertsModalProps> = ({
+  incidents,
+  onClose,
+  onMarkRead,
+  onSimulateAlert,
+  lastReadTime,
+}) => {
   // Sort by timestamp descending
   const sortedIncidents = [...incidents]
     .filter(inc => new Date(inc.timestamp).getTime() > lastReadTime)
@@ -35,13 +42,25 @@ export const RecentAlertsModal: React.FC<RecentAlertsModalProps> = ({ incidents,
             </div>
           </div>
           
-          <button 
-            onClick={onMarkRead}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-surface-container-high hover:bg-surface-container-highest text-on-surface-variant transition-colors text-xs font-medium"
-          >
-            <CheckCircle size={14} />
-            Mark All Read
-          </button>
+          <div className="flex items-center gap-2 shrink-0">
+            {onSimulateAlert && (
+              <button
+                onClick={onSimulateAlert}
+                title="Trigger simulated crisis alert (sound, desktop popup, and incident telemetry)"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary/15 hover:bg-primary/25 border border-primary/40 text-primary transition-colors text-xs font-semibold shrink-0 cursor-pointer shadow-sm"
+              >
+                <Zap size={14} className="fill-primary" />
+                Simulate Alert
+              </button>
+            )}
+            <button 
+              onClick={onMarkRead}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-surface-container-high hover:bg-surface-container-highest text-on-surface-variant transition-colors text-xs font-medium cursor-pointer"
+            >
+              <CheckCircle size={14} />
+              Mark All Read
+            </button>
+          </div>
         </div>
 
         <div className="flex-1 overflow-y-auto space-y-3 pr-2 custom-scrollbar relative z-10">
@@ -56,7 +75,7 @@ export const RecentAlertsModal: React.FC<RecentAlertsModalProps> = ({ incidents,
             return (
               <div key={incident.id} className={`p-3 rounded-lg border flex flex-col gap-1 relative overflow-hidden ${isUnread ? 'bg-surface-container-high border-primary/30' : 'bg-surface-container-low border-outline-variant/30'}`}>
                 {isUnread && <div className="absolute top-3 right-3 w-2 h-2 rounded-full bg-primary animate-pulse"></div>}
-                <div className={"absolute left-0 top-0 bottom-0 w-1 " + (incident.severity === 'extreme' ? 'bg-error' : incident.severity === 'high' ? 'bg-tertiary' : 'bg-primary')}></div>
+                <div className={"absolute left-0 top-0 bottom-0 w-1 " + (incident.severity === 'CRITICAL' ? 'bg-error' : incident.severity === 'HIGH' ? 'bg-tertiary' : 'bg-primary')}></div>
                 
                 <div className="flex justify-between items-start pl-2 pr-4">
                   <h3 className={`font-medium ${isUnread ? 'text-on-surface font-semibold' : 'text-on-surface-variant'}`}>{incident.title}</h3>
@@ -66,8 +85,8 @@ export const RecentAlertsModal: React.FC<RecentAlertsModalProps> = ({ incidents,
                 
                 <div className="flex items-center gap-2 pl-2 mt-1">
                   <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-sm uppercase tracking-wider ${
-                    incident.severity === 'extreme' ? 'bg-error/20 text-error' :
-                    incident.severity === 'high' ? 'bg-tertiary/20 text-tertiary' :
+                    incident.severity === 'CRITICAL' ? 'bg-error/20 text-error' :
+                    incident.severity === 'HIGH' ? 'bg-tertiary/20 text-tertiary' :
                     'bg-primary/20 text-primary'
                   }`}>
                     {incident.type}

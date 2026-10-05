@@ -1,20 +1,43 @@
-﻿import { createClient } from '@supabase/supabase-js'
+'use client';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
-// Support both key names so it works regardless of which is set in .env.local
-const supabaseAnonKey =
+import { createBrowserClient } from '@supabase/ssr';
+import type { SupabaseClient } from '@supabase/supabase-js';
+
+/**
+ * Single canonical browser Supabase client for the whole app.
+ *
+ * We use `createBrowserClient` from @supabase/ssr (not the plain
+ * `@supabase/supabase-js` client) so that the auth session is stored in
+ * cookies that the Next.js server + middleware can read. That is what keeps
+ * `supabase.auth.getUser()` and `onAuthStateChange` consistent between the
+ * browser and server-rendered routes.
+ *
+ * `createBrowserClient` already memoizes itself in browsers; the extra
+ * `globalThis` cache protects against duplicate clients across HMR re-evaluations.
+ */
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+const supabaseKey =
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
   process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
-  ''
+  '';
 
-// Singleton: reuse the same instance during hot-module reload to prevent
-// "Multiple GoTrueClient instances" warnings
-const globalKey = '__supabase_singleton__'
-type G = typeof globalThis & { [globalKey]?: ReturnType<typeof createClient> }
-const g = globalThis as G
+export const isSupabaseConfigured = Boolean(supabaseUrl && supabaseKey);
 
-if (!g[globalKey]) {
-  g[globalKey] = createClient(supabaseUrl, supabaseAnonKey)
+type GlobalWithSupabase = typeof globalThis & {
+  __supabase_browser_singleton__?: SupabaseClient;
+};
+
+const g = globalThis as GlobalWithSupabase;
+
+if (!g.__supabase_browser_singleton__) {
+  g.__supabase_browser_singleton__ = createBrowserClient(supabaseUrl, supabaseKey);
 }
 
-export const supabase = g[globalKey]!
+/** Shared browser client instance. */
+export const supabase: SupabaseClient = g.__supabase_browser_singleton__;
+
+/**
+ * Factory form kept for call sites that expect `createClient()`. Returns the
+ * same shared instance so no duplicate clients are ever created.
+ */
+export const createClient = () => supabase;

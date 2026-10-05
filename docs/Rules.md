@@ -11,9 +11,9 @@
 ### 1.1 The Deterministic Risk Boundary
 > [!CRITICAL]
 > **RULE 1.1**: The Risk Engine MUST be 100% deterministic, mathematical, and reproducible.
-- Under NO circumstance may Google Gemini or any LLM determine, classify, upgrade, downgrade, or infer a user's risk rating (`SAFE`, `MONITORING`, `WARNING`, `HIGH RISK`).
-- All risk assessments are computed exclusively via deterministic PostGIS spatial functions (`ST_DWithin`, `ST_Contains`, `ST_Intersects`) against validated hazard geometries.
-- AI's role is strictly limited to explaining verified telemetry and offering plain-language emergency preparedness checklists.
+- Under NO circumstance may any LLM determine, classify, upgrade, downgrade, or infer a user's risk rating (`SAFE`, `MONITORING`, `WARNING`, `HIGH RISK`).
+- All risk assessments are computed exclusively via deterministic functions (in the current build, pure-arithmetic haversine distance + bounding-box checks in Supabase SQL — `fn_haversine_km`, `INDIA_BBOX` — not PostGIS, because the schema is independent of extension provisioning).
+- AI's role is strictly limited to explaining verified telemetry and offering plain-language emergency preparedness checklists. The current build does **not** call any LLM; advisory text is deterministic.
 
 ### 1.2 Zero Hallucination Policy for Life Safety Information
 > [!CAUTION]
@@ -24,10 +24,10 @@
 
 ### 1.3 Client-Side AI Isolation
 > [!IMPORTANT]
-> **RULE 1.3**: The client application must NEVER communicate directly with the Gemini API.
-- The Google Gemini API key must **never** be exposed in client bundles (`VITE_GEMINI_API_KEY` is strictly prohibited).
-- All AI queries route through the Spring Boot backend `/api/v1/ai/guidance` endpoint.
-- The backend sanitizes inputs, injects the verified disaster context, applies safety prompt boundaries, and returns structured JSON responses.
+> **RULE 1.3**: If AI guidance is ever added, the client application must NEVER communicate directly with the LLM API.
+- Any LLM API key must **never** be exposed in client bundles (no `NEXT_PUBLIC_GEMINI_API_KEY` or equivalent).
+- All AI queries must route through a server-side mediator (in the current architecture, a Supabase Edge Function / RPC with SECURITY DEFINER, or a Next.js server action) that sanitizes inputs, injects verified disaster context, applies safety prompt boundaries, and returns structured responses.
+- The current build does not include AI guidance, so this rule is prospective.
 
 ### 1.4 Mandatory Emergency Disclaimer
 > [!WARNING]
@@ -39,28 +39,29 @@
 ## 2. Technology Stack Boundaries & Library Policies
 
 ### 2.1 Approved Frontend Libraries
-- **Core**: React 18 (`react`, `react-dom`), TypeScript (`strict: true`), Vite.
+- **Core**: React 19 (`react`, `react-dom`), TypeScript (`strict: true`), Next.js 16 (App Router).
 - **Styling**: Tailwind CSS configured strictly with the **Stitch Tactical Design System** tokens (see `Design.md`).
 - **Icons**: Lucide React (`lucide-react`) and Google Material Symbols Outlined.
-- **Mapping**: MapLibre GL JS (`maplibre-gl`) or Leaflet (`leaflet`, `react-leaflet`) for vector/tile rendering.
-- **State & Server Cache**: Zustand for client-side viewport and filter state; TanStack Query (`@tanstack/react-query`) for API data caching.
-- **Data Visualization**: Recharts (`recharts`) styled with tactical dark theme and monospace labels.
+- **Mapping**: Leaflet (`leaflet`) for tile rendering (ESRI World Dark Gray Canvas, zero API key). MapLibre GL JS is acceptable if a vector style is needed later.
+- **State & Server Cache**: React state + effects for the live feed poll (loads are kicked off from `page.tsx` effects and re-fetch every 60s); Supabase clients handle their own caching. Zustand is acceptable for viewport/filter state if needed; TanStack Query is acceptable for server-state caching if the data shape grows.
+- **Data Visualization**: Recharts (`recharts`) styled with tactical dark theme and monospace labels (for the later analytics phase).
 
 ### 2.2 Forbidden Frontend Libraries & Practices
 - ❌ **Do NOT use Tailwind utility colors directly** (e.g., `bg-red-500`, `bg-blue-600`). Use system design tokens: `bg-secondary-container`, `bg-primary`, `text-tertiary`, `bg-surface-container`.
 - ❌ **Do NOT use heavy, generic UI frameworks** (MUI, Ant Design, Bootstrap, Chakra) that pollute the CSS bundle and violate the tactical aerospace aesthetic.
-- ❌ **Do NOT introduce client-side GIS computation engines** (e.g., Turf.js for massive polygon intersection). Heavy spatial calculations belong in PostgreSQL + PostGIS.
+- ❌ **Do NOT introduce heavy client-side GIS computation engines** (e.g., Turf.js for massive polygon intersection) unless the Supabase-side deterministic helpers can't express the calculation. The current build uses pure-arithmetic haversine + bounding boxes in Supabase SQL; prefer that over client-side geometry libraries.
 
-### 2.3 Approved Backend Libraries
-- **Core**: Java 21 LTS, Spring Boot 3.2+, Spring Web, Spring Validation.
-- **Persistence**: Spring Data JPA, Hibernate Spatial, PostgreSQL JDBC, Flyway for migrations.
-- **Security**: Spring Security 6.x, `jjwt` (Java JWT).
-- **HTTP & Resilience**: Spring WebFlux (`WebClient`) for asynchronous ingestion; Resilience4j for circuit breakers and retries.
-- **Caching**: Spring Data Redis.
+### 2.3 Backend (Supabase — the live runtime)
+- **Auth**: Supabase Auth (email + password, Google OAuth, session refresh in `proxy.ts`).
+- **Database**: Supabase PostgreSQL. Workflow tables (`user_profiles`, `saved_locations`, `alert_preferences`, `disaster_events`, `notifications`, `push_subscriptions`), RLS policies, triggers (`fn_handle_new_user`, `fn_notify_disaster_event`), and RPCs (`ingest_disaster_events`, `mark_all_notifications_read`, `upsert_global_alert_preference`).
+- **Real-time**: Supabase Realtime (`supabase_realtime` publication; `notifications` + `disaster_events`; `notifications` replica identity FULL).
+- **Storage (future)**: Supabase Storage bucket for avatar uploads (not wired yet).
+- **Migrations**: idempotent SQL in `supabase/schema.sql` + the signup-recovery `supabase/fix-signup.sql`. Prefer a single reproducible apply step (CLI/API) over hand-running SQL in the dashboard.
 
 ### 2.4 Forbidden Backend Practices
-- ❌ **Do NOT split the backend into distributed microservices**. DisasterWatch is designed as a **Modular Monolith**. Keep all domains in their respective `com.disasterwatch.*` packages.
-- ❌ **Do NOT introduce heavyweight message brokers** (Kafka, RabbitMQ) in Phase 1. Native Spring Scheduler and Server-Sent Events (SSE) satisfy all real-time requirements.
+- ❌ **Do NOT hand-edit the live Supabase schema in ways that diverge from `supabase/schema.sql` without updating the file.** The repo is the source of truth for the schema; the dashboard SQL Editor is the deployment target. If a change is made in the dashboard, mirror it in `schema.sql` so the two can't drift.
+- ❌ **Do NOT add a separate application server (Java/Spring Boot, Node, etc.) unless a real requirement forces it.** The current runtime is Supabase-managed; adding a server reopens auth, connection, and deployment complexity that Supabase already solves.
+- ❌ **Do NOT introduce heavyweight message brokers** (Kafka, RabbitMQ). Supabase Realtime (PostgreSQL replication publication) satisfies the real-time requirement; the notification trigger produces notifications deterministically, not via an async queue.
 
 ---
 
@@ -87,13 +88,14 @@
 
 ## 5. Ingestion Pipeline & Fault Tolerance
 
-1. **Failure Isolation**: An exception or network timeout in one external source adapter (e.g., NASA EONET downtime) must be trapped and logged without terminating scheduled ingestion for other adapters (e.g., USGS).
-2. **Rate Limit Courtesy**: All outbound HTTP requests via `WebClient` must respect upstream vendor rate limits and implement exponential backoff with jitter.
-3. **Data Freshness & Caching**: External responses must be cached in Redis with realistic TTLs (60 seconds for high-velocity earthquakes, 300 seconds for wildfires) to prevent redundant upstream API exhaustion.
+1. **Failure Isolation**: An exception or network timeout in one external source adapter (e.g., NASA EONET downtime, a GDACS 5xx, a tsunami proxy failure) must be trapped and logged without terminating the other feeds. Each adapter returns `[]` on failure, and `fetchAllDisasters()` awaits them in parallel with `Promise.all`, so one failure cannot block the rest.
+2. **Rate Limit Courtesy**: All outbound HTTP requests must respect upstream vendor rate limits. The tsunami proxy caches upstream responses for 120s (`revalidate = 120` in `/api/tsunami/route.ts`); the main feed poll runs every 60s in the browser. Do not shorten the poll interval to chase freshness — if a feed needs finer granularity, prefer its curated real-time stream (e.g. USGS GeoJSON) over polling more often.
+3. **Data Freshness & Caching**: There is no Redis in the current build. Freshness is handled by the 60s browser poll + the 120s tsunami proxy cache + Supabase-side dedupe in the `ingest_disaster_events` upsert (idempotent by event id). Do not introduce Redis unless a real cache-eviction requirement appears.
 
 ---
 
 ## 6. Development Workflow & Session Memory Protocol
 
-1. **Phased Execution**: Features must be implemented strictly according to `Phases.md`. Do not leap ahead to AI integration or user management before the Phase 1 tactical radar dashboard is rock solid.
-2. **Context Preservation**: As development proceeds, maintain `Memory.md` at the project root. Document completed features, active roadblocks, current file locations, and verification commands to preserve state across multi-turn sessions.
+1. **Phased Execution**: Features must be implemented according to the **current** `Phases.md` (rewritten around the Supabase-backed path). Do not reintroduce the old Java/Spring Boot plan as if it were current.
+2. **Context Preservation**: As development proceeds, maintain `Memory.md` at the project root. Document completed features, active roadblocks, current file locations, and verification commands to preserve state across multi-turn sessions. When the live runtime changes materially (new backend, new auth model, new real-time mechanism), update `STATUS.md`, `Memory.md`, `Architecture.md`, and `Phases.md` together — not just one of them.
+3. **Doc reconciliation on reality shifts**: whenever the actual stack diverges from what the docs describe, fix the docs before adding new features. The most common drift is the old Spring Boot roadmap still being quoted as current — if you see it, update `STATUS.md` + `Memory.md` + `Architecture.md` + `Phases.md` + `PRD.md` §8 + the READMEs + `Rules.md` together.

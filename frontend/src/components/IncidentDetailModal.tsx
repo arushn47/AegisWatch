@@ -4,12 +4,12 @@ import React, { useState } from 'react';
 import { 
   X, 
   ExternalLink, 
-  Sparkles, 
   MapPin, 
   AlertTriangle, 
   Info,
   Layers,
-  Compass
+  Compass,
+  ShieldCheck
 } from 'lucide-react';
 import type { DisasterEvent } from '../types/disaster';
 
@@ -32,6 +32,25 @@ export const IncidentDetailModal: React.FC<IncidentDetailModalProps> = ({
 
   // Mock simulated deterministic risk calculation from sample user position (Tokyo or SF)
   const isHighSeverity = incident.severity === 'CRITICAL' || incident.severity === 'HIGH';
+
+  // Severity → accent bar / chip tokens (mirrors the incident cards).
+  const severityBar =
+    incident.severity === 'CRITICAL'
+      ? 'bg-error'
+      : incident.severity === 'HIGH'
+        ? 'bg-tertiary'
+        : incident.severity === 'MEDIUM'
+          ? 'bg-primary'
+          : 'bg-outline';
+
+  const severityChip =
+    incident.severity === 'CRITICAL'
+      ? 'bg-error/20 text-error border-error/40'
+      : incident.severity === 'HIGH'
+        ? 'bg-tertiary/20 text-tertiary border-tertiary/40'
+        : incident.severity === 'MEDIUM'
+          ? 'bg-primary/20 text-primary border-primary/40'
+          : 'bg-outline/15 text-outline border-outline/30';
 
   const handleGenerateAiGuidance = () => {
     setIsGeneratingAi(true);
@@ -77,6 +96,9 @@ export const IncidentDetailModal: React.FC<IncidentDetailModalProps> = ({
         className="relative w-full max-w-5xl bg-surface-container-low border border-outline-variant/50 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
         onClick={(e) => e.stopPropagation()}
       >
+        {/* Severity accent bar */}
+        <span className={`absolute top-0 left-0 right-0 h-[2px] z-10 ${severityBar}`} aria-hidden="true" />
+
         {/* Modal Header */}
         <div className="flex items-start justify-between p-5 border-b border-outline-variant/30 bg-surface-container-lowest/70">
           <div className="flex flex-col gap-1 pr-4">
@@ -84,11 +106,7 @@ export const IncidentDetailModal: React.FC<IncidentDetailModalProps> = ({
               <span className="px-2.5 py-0.5 rounded text-xs font-label-mono-sm font-bold uppercase tracking-wider bg-primary/20 text-primary border border-primary/40">
                 {incident.type}
               </span>
-              <span className={`px-2 py-0.5 rounded text-xs font-label-mono-sm font-bold uppercase tracking-wider ${
-                incident.severity === 'CRITICAL'
-                  ? 'bg-secondary-container/40 text-secondary border border-secondary-container'
-                  : 'bg-tertiary/20 text-tertiary border border-tertiary/40'
-              }`}>
+              <span className={`px-2 py-0.5 rounded text-xs font-label-mono-sm font-bold uppercase tracking-wider border ${severityChip}`}>
                 {incident.severity} SEVERITY
               </span>
               <span className="font-label-mono-sm text-xs text-outline">
@@ -230,11 +248,11 @@ export const IncidentDetailModal: React.FC<IncidentDetailModalProps> = ({
                       ? 'bg-secondary-container text-white'
                       : 'bg-primary-container text-on-primary-container'
                   }`}>
-                    {isHighSeverity ? 'WARNING (IN RANGE)' : 'SAFE (OUT OF RANGE)'}
+                    {isHighSeverity ? 'ELEVATED ATTENTION' : 'MONITOR'}
                   </span>
                 </div>
                 <p className="text-sm text-on-surface-variant leading-relaxed">
-                  Calculated based on your distance from the event epicenter. If you are within the hazard radius, you will receive a direct alert.
+                  Severity-based advisory for this event. Enable location access and save locations to receive distance-aware alerts for hazards near you.
                 </p>
               </div>
 
@@ -242,9 +260,9 @@ export const IncidentDetailModal: React.FC<IncidentDetailModalProps> = ({
               <div className="p-5 rounded-xl bg-surface-container-high/80 border border-primary/30 flex flex-col gap-4 w-full">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <Sparkles className="w-4 h-4 text-primary" />
+                    <ShieldCheck className="w-4 h-4 text-primary" />
                     <span className="font-headline-sm text-xs font-bold text-primary uppercase tracking-wider">
-                      AI Emergency Guidance Assistant
+                      Safety Guidance Checklist
                     </span>
                   </div>
                   {!aiExpanded && (
@@ -254,11 +272,17 @@ export const IncidentDetailModal: React.FC<IncidentDetailModalProps> = ({
                       className="px-3 py-1.5 rounded bg-primary text-on-primary font-body-md text-xs font-semibold hover:bg-primary-fixed transition-colors flex items-center gap-1.5 shadow-sm"
                       type="button"
                     >
-                      <Sparkles className="w-3.5 h-3.5" />
-                      {isGeneratingAi ? 'Synthesizing...' : 'Generate AI Action Brief'}
+                      <ShieldCheck className="w-3.5 h-3.5" />
+                      {isGeneratingAi ? 'Loading...' : 'Show Safety Checklist'}
                     </button>
                   )}
                 </div>
+
+                {/* Honest labelling: these steps are pre-defined per hazard type,
+                    not generated by a model. */}
+                <p className="text-[10px] text-outline -mt-1">
+                  Static, pre-defined safety steps for this hazard type — not AI-generated.
+                </p>
 
                 {aiExpanded && aiChecklist && (
                   <div className="flex flex-col gap-3 pt-3 border-t border-outline-variant/30">
@@ -287,7 +311,9 @@ export const IncidentDetailModal: React.FC<IncidentDetailModalProps> = ({
                     IMPORTANT NOTICE
                   </span>
                   <span className="text-xs text-on-surface-variant leading-relaxed">
-                    This is an informational tool only. Always follow official evacuation and safety instructions from your local emergency authorities.
+                    DisasterWatch is an informational decision-support tool. It does not replace
+                    official emergency broadcast systems or lawful instructions from civil defense
+                    authorities.
                   </span>
                 </div>
               </div>

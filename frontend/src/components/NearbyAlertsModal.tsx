@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { AlertTriangle, ShieldCheck } from 'lucide-react';
 import type { DisasterEvent } from '../types/disaster';
+import { EmergencyDisclaimer } from './EmergencyDisclaimer';
 
 interface NearbyAlertsModalProps {
   incidents: DisasterEvent[];
@@ -27,12 +28,17 @@ export const NearbyAlertsModal: React.FC<NearbyAlertsModalProps> = ({ incidents,
   const [locationError, setLocationError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (typeof window !== 'undefined' && localStorage.getItem('aegis_location_access') === 'never') {
+      setLocationError("Location access is blocked in your AegisWatch Privacy Settings. Switch to 'While on Site' or 'Always Allow' in Profile Settings to enable local alerts.");
+      return;
+    }
+
     if ("geolocation" in navigator) {
       navigator.geolocation.getCurrentPosition(
         (position) => {
           setUserLocation([position.coords.latitude, position.coords.longitude]);
         },
-        (error) => {
+        () => {
           setLocationError("Could not get your location. Please enable GPS to see local alerts.");
         }
       );
@@ -74,6 +80,9 @@ export const NearbyAlertsModal: React.FC<NearbyAlertsModalProps> = ({ incidents,
         </div>
 
         <div className="flex-1 overflow-y-auto space-y-4 pr-2 custom-scrollbar relative z-10">
+          {/* Mandatory emergency disclaimer (RULE 1.4) for this risk view */}
+          <EmergencyDisclaimer variant="bar" />
+
           {!userLocation && !locationError && (
             <div className="flex flex-col items-center justify-center p-8 text-center bg-surface-container-low rounded-lg border border-outline-variant/30">
               <span className="material-symbols-outlined animate-spin text-primary text-3xl mb-2">sync</span>
@@ -102,7 +111,7 @@ export const NearbyAlertsModal: React.FC<NearbyAlertsModalProps> = ({ incidents,
             
             return (
               <div key={incident.id} className="bg-surface-container-low p-4 rounded-lg border border-outline-variant/30 flex flex-col gap-2 relative overflow-hidden group">
-                <div className={"absolute left-0 top-0 bottom-0 w-1 " + (incident.severity === 'extreme' ? 'bg-error' : incident.severity === 'high' ? 'bg-tertiary' : 'bg-primary')}></div>
+                <div className={"absolute left-0 top-0 bottom-0 w-1 " + (incident.severity === 'CRITICAL' ? 'bg-error' : incident.severity === 'HIGH' ? 'bg-tertiary' : 'bg-primary')}></div>
                 
                 <div className="flex justify-between items-start pl-2">
                   <h3 className="text-on-surface font-medium">{incident.title}</h3>
@@ -115,8 +124,8 @@ export const NearbyAlertsModal: React.FC<NearbyAlertsModalProps> = ({ incidents,
                 
                 <div className="flex items-center gap-2 pl-2 mt-2">
                   <span className={"text-[10px] font-bold px-2 py-0.5 rounded-sm uppercase tracking-wider " + (
-                    incident.severity === 'extreme' ? 'bg-error/20 text-error' :
-                    incident.severity === 'high' ? 'bg-tertiary/20 text-tertiary' :
+                    incident.severity === 'CRITICAL' ? 'bg-error/20 text-error' :
+                    incident.severity === 'HIGH' ? 'bg-tertiary/20 text-tertiary' :
                     'bg-primary/20 text-primary'
                   )}>
                     {incident.severity}

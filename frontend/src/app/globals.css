@@ -19,18 +19,47 @@
 
 /* Custom Tactical Scrollbar */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
 }
 ::-webkit-scrollbar-track {
-  background: #0a0e16;
+  background: transparent;
 }
 ::-webkit-scrollbar-thumb {
   background: #262a33;
-  border-radius: 3px;
+  border-radius: 9999px;
 }
 ::-webkit-scrollbar-thumb:hover {
   background: #374151;
+}
+::-webkit-scrollbar-button {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(134, 147, 151, 0.25) transparent;
+  overscroll-behavior: contain;
+}
+.custom-scrollbar::-webkit-scrollbar {
+  width: 4px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(134, 147, 151, 0.25);
+  border-radius: 9999px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(76, 215, 246, 0.6);
+}
+.custom-scrollbar::-webkit-scrollbar-button {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
 }
 
 /* Leaflet Dark Customizations */
@@ -97,4 +126,117 @@
 
 .hazard-glow-cyan {
   box-shadow: 0 0 16px rgba(6, 182, 212, 0.25);
+}
+
+/* ---------------------------------------------------------------------------
+   Ambient "Command Aurora" backdrop
+   A living, GPU-cheap background glow (no WebGL / no dependency). Two blurred
+   radial blobs drift slowly behind the app shell on transform/opacity only.
+   Honors prefers-reduced-motion.
+   --------------------------------------------------------------------------- */
+@keyframes aegis-drift-a {
+  0%, 100% { transform: translate3d(-8%, -6%, 0) scale(1); }
+  50%      { transform: translate3d(6%, 4%, 0) scale(1.15); }
+}
+@keyframes aegis-drift-b {
+  0%, 100% { transform: translate3d(8%, 6%, 0) scale(1.1); }
+  50%      { transform: translate3d(-6%, -4%, 0) scale(1); }
+}
+
+.aegis-aurora {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.aegis-aurora::before,
+.aegis-aurora::after {
+  content: '';
+  position: absolute;
+  width: 60vmax;
+  height: 60vmax;
+  border-radius: 50%;
+  filter: blur(90px);
+  will-change: transform;
+}
+
+.aegis-aurora::before {
+  top: -28%;
+  left: 18%;
+  background: radial-gradient(circle at center, rgba(6, 182, 212, 0.22), transparent 65%);
+  animation: aegis-drift-a 26s ease-in-out infinite;
+}
+
+.aegis-aurora::after {
+  bottom: -32%;
+  right: -4%;
+  background: radial-gradient(circle at center, rgba(245, 158, 11, 0.14), transparent 65%);
+  animation: aegis-drift-b 32s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .aegis-aurora::before,
+  .aegis-aurora::after {
+    animation: none;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   Tactical map markers (TacticalMap.tsx)
+   Incident dots are severity-sized cores; only HIGH/CRITICAL pulse. The user
+   location marker is a compact on-brand cyan reticle. All motion honors
+/* ---------------------------------------------------------------------------
+   AegisWatch Tactical Map Cartographic Markers
+   Clean, authoritative GIS markers with no blurry neon glow or glitter.
+   --------------------------------------------------------------------------- */
+.aegis-marker-wrap {
+  background: transparent;
+  border: none;
+}
+
+/* Crisp sonar ring for critical/high-risk events only */
+.aegis-sonar-ring {
+  position: absolute;
+  border-radius: 9999px;
+  border: 1px solid currentColor;
+  background: transparent;
+  pointer-events: none;
+  animation: aegis-sonar-sweep 2.4s cubic-bezier(0.1, 0.4, 0.2, 1) infinite;
+}
+
+@keyframes aegis-sonar-sweep {
+  0%   { transform: scale(1); opacity: 0.8; }
+  65%  { transform: scale(2.2); opacity: 0.25; }
+  100% { transform: scale(2.7); opacity: 0; }
+}
+
+/* Ground radar sweep anchored at the needle tip of user location pin */
+.aegis-pin-radar {
+  position: absolute;
+  bottom: 0px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 14px;
+  height: 6px;
+  border-radius: 50%;
+  border: 1px solid #4cd7f6;
+  background: rgba(76, 215, 246, 0.15);
+  pointer-events: none;
+  animation: aegis-pin-sweep 2.4s ease-out infinite;
+}
+
+@keyframes aegis-pin-sweep {
+  0%   { transform: translateX(-50%) scale(0.6); opacity: 0.85; }
+  70%  { transform: translateX(-50%) scale(2.2); opacity: 0.15; }
+  100% { transform: translateX(-50%) scale(2.8); opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .aegis-sonar-ring,
+  .aegis-pin-radar {
+    animation: none;
+    opacity: 0.3;
+  }
 }
