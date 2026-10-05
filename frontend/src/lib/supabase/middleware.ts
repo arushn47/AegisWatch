@@ -15,9 +15,15 @@ const supabaseKey =
   process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
   '';
 
+export const isSupabaseConfigured = Boolean(supabaseUrl && supabaseKey);
+
 export const createClient = (request: NextRequest) => {
   // Start with an unmodified response we can hand back if nothing changes.
   let supabaseResponse = NextResponse.next({ request });
+
+  if (!isSupabaseConfigured) {
+    return { supabase: null, supabaseResponse };
+  }
 
   const supabase = createServerClient(supabaseUrl, supabaseKey, {
     cookies: {

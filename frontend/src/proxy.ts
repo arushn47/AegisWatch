@@ -10,6 +10,10 @@ const PROTECTED_PREFIXES = ['/settings'];
 export async function proxy(request: NextRequest) {
   const { supabase, supabaseResponse } = createClient(request);
 
+  if (!supabase) {
+    return supabaseResponse;
+  }
+
   // IMPORTANT: call getUser() (not getSession()) so the session is validated
   // against Supabase Auth and refreshed cookies are written back.
   const {

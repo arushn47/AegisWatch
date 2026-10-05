@@ -23,6 +23,11 @@ const supabaseKey =
 
 export const isSupabaseConfigured = Boolean(supabaseUrl && supabaseKey);
 
+// Fallback to placeholder strings during build / prerender if env vars are absent,
+// preventing @supabase/ssr from throwing an uncaught error during static analysis.
+const safeUrl = supabaseUrl || 'https://placeholder-project.supabase.co';
+const safeKey = supabaseKey || 'placeholder-anon-key';
+
 type GlobalWithSupabase = typeof globalThis & {
   __supabase_browser_singleton__?: SupabaseClient;
 };
@@ -30,7 +35,7 @@ type GlobalWithSupabase = typeof globalThis & {
 const g = globalThis as GlobalWithSupabase;
 
 if (!g.__supabase_browser_singleton__) {
-  g.__supabase_browser_singleton__ = createBrowserClient(supabaseUrl, supabaseKey);
+  g.__supabase_browser_singleton__ = createBrowserClient(safeUrl, safeKey);
 }
 
 /** Shared browser client instance. */
